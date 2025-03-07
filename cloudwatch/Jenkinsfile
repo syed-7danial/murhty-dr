@@ -1,0 +1,100 @@
+def activeLambdaArns = ['ALL', 'arn:aws:lambda:us-east-1:489994096722:function:dani-test-function', 'arn:aws:lambda:us-east-1:489994096722:function:generate_slack_notification']
+def failoverLambdaArns = ['ALL', 'arn:aws:lambda:us-east-2:489994096722:function:dani-lambda', 'arn:aws:lambda:us-east-2:489994096722:function:dani-lambda']
+
+pipeline {
+    agent any
+    environment {
+        CONFIG_FILE = './cloudwatch/configuration.json'
+    }
+    parameters {
+        choice(name: 'SWITCHING_TO', choices: ['ACTIVE', 'FAILOVER'], description: 'Select the environment')
+        choice(name: 'ACTIVE_LAMBDA_ARNS', choices: activeLambdaArns, description: 'Select the Active Lambda Arn')
+        choice(name: 'FAILOVER_LAMBDA_ARNS', choices: failoverLambdaArns, description: 'Select the Failover Lambda Arn')
+        string(name: 'ACTIVE_LAMBDA_PREFIX', defaultValue: '', description: 'Select the Active Lambda Prefix')
+        string(name: 'FAILOVER_LAMBDA_PREFIX', defaultValue: '', description: 'Select the Failover Lambda Prefix')
+        booleanParam(name: 'RUN_ON_ALL_ACTIVE_LAMBDAS', defaultValue: false, description: 'Check this to run on all the lambdas in active environment')
+        booleanParam(name: 'RUN_ON_ALL_FAILOVER_LAMBDAS', defaultValue: false, description: 'Check this to run on all the lambdas in failover environment')
+
+        password(name: 'AWS_ACCESS_KEY_ID', defaultValue: '', description: 'Enter AWS_ACCESS_KEY_ID')
+        password(name: 'AWS_SECRET_ACCESS_KEY', defaultValue: '', description: 'Enter AWS_SECRET_ACCESS_KEY')
+        password(name: 'AWS_SESSION_TOKEN', defaultValue: '', description: 'Enter AWS_SESSION_TOKEN')
+
+        booleanParam(name: 'DRY_RUN', defaultValue: false, description: 'Check this to run the pipeline in dry run mode')
+        booleanParam(name: 'PROCESS_CURRENT_ENV', defaultValue: false, description: 'Check this to process current environment')
+    }
+    stages {
+        stage('Install Node.js and Packages') {
+            steps {
+                sh 'npm install aws-sdk'
+                sh 'npm install'
+            }
+        }
+
+        stage('Load and Process Configuration') {
+            steps {
+                script {
+                    env.AWS_ACCESS_KEY_ID = params.AWS_ACCESS_KEY_ID
+                    env.AWS_SECRET_ACCESS_KEY = params.AWS_SECRET_ACCESS_KEY
+                    env.AWS_SESSION_TOKEN = params.AWS_SESSION_TOKEN
+
+                    env.SWITCHING_TO = params.SWITCHING_TO
+
+                    if(params.RUN_ON_ALL_ACTIVE_LAMBDAS)
+                        env.ACTIVE_TYPE = "all"
+                    else 
+                    {
+                        if (!params.ACTIVE_LAMBDA_PREFIX.isEmpty())
+                        {
+                            env.ACTIVE_TYPE = "prefix"
+                            env.ACTIVE_LAMBDA_PREFIX = params.ACTIVE_LAMBDA_PREFIX.split(',').collect { it.trim() }
+                        }
+
+                        else 
+                        {
+                            env.ACTIVE_TYPE = "arn"
+                            def activeLambdafilteredArray = []
+                            if (params.ACTIVE_LAMBDA_ARNS == 'ALL') 
+                                activeLambdafilteredArray = activeLambdaArns.findAll { it != 'ALL' }
+                            else
+                                activeLambdafilteredArray = [params.ACTIVE_LAMBDA_ARNS]
+
+
+                            env.ACTIVE_LAMBDA_ARNS = [activeLambdafilteredArray.join(',')]
+                        } 
+                    }
+
+                    if(params.RUN_ON_ALL_FAILOVER_LAMBDAS)
+                        env.FAILOVER_TYPE = "all"
+                    else
+                    {
+                        if (!params.FAILOVER_LAMBDA_PREFIX.isEmpty()) 
+                        {
+                            env.FAILOVER_TYPE = "prefix"
+                            env.FAILOVER_LAMBDA_PREFIX = params.FAILOVER_LAMBDA_PREFIX.split(',').collect { it.trim() }
+                        } 
+                        else
+                        {
+                            env.FAILOVER_TYPE = "arn"
+                            def failoverLambdafilteredArray = []
+                            if (params.FAILOVER_LAMBDA_ARNS == 'ALL') 
+                                failoverLambdafilteredArray = failoverLambdaArns.findAll { it != 'ALL' }
+                            else
+                                failoverLambdafilteredArray = [params.FAILOVER_LAMBDA_ARNS]
+
+                            env.FAILOVER_LAMBDA_ARNS = [failoverLambdafilteredArray.join(',')]
+                        }
+                    }
+
+                    def command = "node cloudwatch/run-cloudwatch.js"
+                    if (params.DRY_RUN) 
+                        command += " -dr"
+
+                    if (params.PROCESS_CURRENT_ENV) 
+                        command += " -pce"
+
+                    sh command
+                }
+            }
+        }
+    }
+}

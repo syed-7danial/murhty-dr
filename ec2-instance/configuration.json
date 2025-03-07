@@ -1,0 +1,172 @@
+{
+    "switching_to": "ACTIVE",
+    "active_region": "us-east-1",
+    "failover_region": "us-east-2",
+    "cloudfront": [
+        {
+            "id": "EORETZSRLXI4A",
+            "behaviors": [
+                {
+                    "path": "Default",
+                    "active_origin": "abd-test-bucket.s3.amazonaws.com",
+                    "failover_origin": "test"
+                },
+                {
+                    "path": "/*.js",
+                    "active_origin": "test2",
+                    "failover_origin": "test"
+                },
+                {
+                    "path": "/images/*",
+                    "active_origin": "abd-test-bucket.s3.amazonaws.com",
+                    "failover_origin": "test2"
+                }
+            ]
+        },
+        {
+            "id": "E3O8I94OMWJEZ1",
+            "behaviors": [
+                {
+                    "path": "Default",
+                    "active_origin": "abd-test-bucket.s3.amazonaws.com",
+                    "failover_origin": "test2"
+                },
+                {
+                    "path": "/*.gif",
+                    "active_origin": "abd-test-bucket.s3.amazonaws.com",
+                    "failover_origin": "test"
+                }
+            ]
+        },
+        {
+            "id": "EP55MX24HA0BY",
+            "behaviors": [
+                {
+                    "path": "Default",
+                    "active_origin": "uniquebucket014309123.s3.amazonaws.com",
+                    "failover_origin": "test"
+                },
+                {
+                    "path": "/static/*",
+                    "active_origin": "uniquebucket014309123.s3.amazonaws.com",
+                    "failover_origin": "test2"
+                },
+                {
+                    "path": "/*.css",
+                    "active_origin": "uniquebucket014309123.s3.amazonaws.com",
+                    "failover_origin": "test2"
+                },
+                {
+                    "path": "/*.js",
+                    "active_origin": "uniquebucket014309123.s3.amazonaws.com",
+                    "failover_origin": "test"
+                }
+            ]
+        }
+    ],
+    "active_lambdas": {
+        "type": "arn",
+        "items": [
+            "arn:aws:lambda:us-east-1:489994096722:function:Test-Assume-Lambda"
+        ]
+    },
+    "failover_lambdas": {
+        "type": "arn",
+        "items": [
+            "arn:aws:lambda:us-east-2:489994096722:function:haider-test-k"
+        ]
+    },
+    "active_lambda_triggers": 
+    [
+        {
+            "arn": "arn:aws:lambda:us-east-2:489994096722:function:test-function-waqar",
+            "buckets": [
+                {
+                    "name": "waqar-test-v3",
+                    "eventName": "xxxx",
+                    "events": [
+                        "s3:ReducedRedundancyLostObject",
+                        "s3:ObjectCreated:*"
+                    ]
+                }
+            ],
+            "sqs": [
+                "e0976eb9-5f34-4cdd-9fd8-a29a68f6ee33"
+            ]
+        }
+    ],
+    "failover_lambda_triggers": [
+        {
+            "arn": "arn:aws:lambda:us-east-2:489994096722:function:test-function-waqar",
+            "buckets": [
+                {
+                    "name": "waqar-test-v3",
+                    "eventName": "xxxx",
+                    "events": [
+                        "s3:ReducedRedundancyLostObject",
+                        "s3:ObjectCreated:*"
+                    ],
+                    "filter": {
+                        "Key": 
+                        {
+                            "FilterRules": [
+                                {
+                                    "Name": "prefix",
+                                    "Value": "/images"
+                                },
+                                {
+                                    "Name": "suffix",
+                                    "Value": ".jpg"
+                                }
+                           ]
+                        }
+                    }
+                }
+            ],
+            "sqs": [
+                "e0976eb9-5f34-4cdd-9fd8-a29a68f6ee33"
+            ]
+        }
+    ],
+    "vpn_endpoints": [
+        {
+        "id":"ABANK",
+        "active_vpn_endpoint_id": "vpn-059e5c607186db9e2",
+        "failover_vpn_endpoint_id": "vpn-036b47f70ab0e7e64"
+    },
+    {
+        "id":"BBANK",
+        "active_vpn_endpoint_id": "vpn-0891cbef31625cd1c",
+        "failover_vpn_endpoint_id": "vpn-01239cfd8003ee5b2"
+    },
+    {
+        "id":"CBANK",
+        "active_vpn_endpoint_id": "vpn-059e5c607186db9e2",
+        "failover_vpn_endpoint_id": "vpn-036b47f70ab0e7e64"
+    }],
+    "rds":[
+        {
+            "force_delete_if_exists": true,
+            "active_configurations": {
+                "identifier": "xxx",
+                "kms_key_id": "xxx",
+                "subnet_group_name":"xxx",
+                "security_group_ids":["sg-xxx"]
+            },
+            "failover_configurations": {
+                "identifier": "xxx",
+                "kms_key_id": "xxx",
+                "subnet_group_name":"xxx",
+                "security_group_ids":["sg-xxx"]
+            }
+        }
+    ],
+    "redis":[
+        {
+            "global_replication_group_id":"xxx",
+            "active_cluster":"xxx",
+            "failover_cluster":"xxx"
+        }
+    ]
+
+}

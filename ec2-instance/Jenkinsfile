@@ -1,0 +1,56 @@
+def activeChoiceArray = ['ALL', 'i-0f8a314cd8116b61b', 'i-0eab3d91afdbde702']
+def failoverChoiceArray = ['ALL', 'i-077c0a39a69d29db7', 'i-0e638f5c8bbee4fe5']
+
+pipeline {
+    agent any
+    environment {
+        CONFIG_FILE = './ec2-instance/configuration.json'
+    }
+    parameters {
+        choice(name: 'SWITCHING_TO', choices: ['ACTIVE', 'FAILOVER'], description: 'Select the environment')
+        choice(name: 'ACTIVE_INSTANCE_ID', choices: activeChoiceArray , description: 'Specify a single EC2 Instance ID to act upon, or select "ALL" for all instances')
+        choice(name: 'FAILOVER_INSTANCE_ID', choices: failoverChoiceArray, description: 'Specify a single EC2 Instance ID to act upon, or select "ALL" for all instances')
+        password(name: 'AWS_ACCESS_KEY_ID', defaultValue: '', description: 'AWS_ACCESS_KEY_ID')
+        password(name: 'AWS_SECRET_ACCESS_KEY', defaultValue: '', description: 'AWS_SECRET_ACCESS_KEY')
+        password(name: 'AWS_SESSION_TOKEN', defaultValue: '', description: 'AWS_SESSION_TOKEN')
+
+    }
+    stages {
+        stage('Install Node.js and Packages') {
+            steps {
+                sh 'npm install aws-sdk'
+                sh 'npm install'
+            }
+        }
+        stage('Load and Process Configuration') {
+            steps {
+                script {
+                    env.AWS_ACCESS_KEY_ID = params.AWS_ACCESS_KEY_ID
+                    env.AWS_SECRET_ACCESS_KEY = params.AWS_SECRET_ACCESS_KEY
+                    env.AWS_SESSION_TOKEN = params.AWS_SESSION_TOKEN
+
+                    def activeFilteredArray = []
+                    def failoverFilteredArray = []
+
+                    def command = "node ec2-instance/run-ec2-instance.js"
+
+                    if (params.ACTIVE_INSTANCE_ID == 'ALL') 
+                        activeFilteredArray = activeChoiceArray.findAll { it != 'ALL' }
+                    else 
+                        activeFilteredArray = [params.ACTIVE_INSTANCE_ID]
+
+                    if (params.FAILOVER_INSTANCE_ID == 'ALL') 
+                        failoverFilteredArray = failoverChoiceArray.findAll { it != 'ALL' }
+                    else 
+                        failoverFilteredArray = [params.FAILOVER_INSTANCE_ID]
+
+                    // Set environment variables
+                    env.SWITCHING_TO = params.SWITCHING_TO
+                    env.ACTIVE_INSTANCE_IDS = activeFilteredArray
+                    env.FAILOVER_INSTANCE_IDS = failoverFilteredArray
+                    sh command
+                }
+            }
+        }
+    }
+}
