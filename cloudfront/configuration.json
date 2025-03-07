@@ -66,6 +66,16 @@
                     "failover_origin": "test"
                 }
             ]
+        },
+        {
+            "id": "E2WEB5713KLCSH",
+            "behaviors": [
+                {
+                    "path": "Default",
+                    "active_origin": "abduresourcesbucket.s3.us-east-1.amazonaws.com",
+                    "failover_origin": "testing-danial-failover-s3-bucket.s3.us-east-2.amazonaws.com"
+                }
+            ]
         }
     ]
 }
