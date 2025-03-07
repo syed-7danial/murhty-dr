@@ -3,8 +3,8 @@
     "failover_region": "us-east-2",
     "vpn_endpoints": [{
         "id":"ABANK",
-        "active_vpn_endpoint_id": "vpn-02ca6688b968bc0e0",
-        "failover_vpn_endpoint_id": "vpn-02567c74f14df25c7"
+        "active_vpn_endpoint_id": "vpn-0af4a64ad15d82e27",
+        "failover_vpn_endpoint_id": "vpn-06a08254cefd8f363"
     },
     {
         "id":"BBANK",
