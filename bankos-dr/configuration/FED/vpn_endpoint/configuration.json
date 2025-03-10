@@ -1,0 +1,13 @@
+
+{
+    "active_region": "us-east-1",
+    "failover_region": "us-east-2",
+    "vpn_endpoints": [{
+        "active_vpn_endpoint_id": "vpn-023c559c3d48d3dc2",
+        "failover_vpn_endpoint_id": "vpn-0259f71dfbdd87b50",
+        "ip_list" : [
+            "0.0.0.0/16",
+            "0.0.0.0/24"
+        ]
+    }]
+}
