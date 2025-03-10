@@ -22,23 +22,23 @@ const readAndParseFile = async (file) => {
   return JSON.parse(data);
 };
 
-const copyEventNotifications = async (s3Settings) => {
+const copyEventNotifications = async (triggers) => {
   custom_logging(chalk.green("Starting S3 Event Notification Copy"));
-
-  const activeBucket = s3Settings.active_bucket;
-  const failoverBucket = s3Settings.failover_bucket;
-
-  try {
-    const activeConfig = await s3.getBucketNotificationConfiguration({ Bucket: activeBucket }).promise();
-    
-    await s3.putBucketNotificationConfiguration({
-      Bucket: failoverBucket,
-      NotificationConfiguration: activeConfig
-    }).promise();
-    
-    custom_logging(chalk.green(`Copied event notifications from ${activeBucket} to ${failoverBucket}`));
-  } catch (error) {
-    custom_logging(chalk.red(`Error copying event notifications: ${error.message}`));
+  
+  for (const trigger of triggers) {
+    const { active_bucket, failover_bucket } = trigger;
+    try {
+      const activeConfig = await s3.getBucketNotificationConfiguration({ Bucket: active_bucket }).promise();
+      
+      await s3.putBucketNotificationConfiguration({
+        Bucket: failover_bucket,
+        NotificationConfiguration: activeConfig
+      }).promise();
+      
+      custom_logging(chalk.green(`Copied event notifications from ${active_bucket} to ${failover_bucket}`));
+    } catch (error) {
+      custom_logging(chalk.red(`Error copying event notifications for ${active_bucket}: ${error.message}`));
+    }
   }
 };
 
@@ -69,7 +69,7 @@ const mainFunction = async () => {
   }
 
   custom_logging(`Switching to ${chalk.green(envs.switching_to)} environment`);
-  await copyEventNotifications(envs);
+  await copyEventNotifications(envs.triggers);
   custom_logging(chalk.green("Process has been completed"));
 };
 
