@@ -26,8 +26,6 @@ pipeline {
             }
         }
 
-
-
         stage('Load and Process Configuration') {
             steps {
                 script {

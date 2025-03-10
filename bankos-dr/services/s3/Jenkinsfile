@@ -1,7 +1,7 @@
 pipeline {
     agent any
     environment {
-        CONFIG_FILE = './s3/configuration.json'
+        CONFIG_FILE = 'bankos-dr/configuration/common/s3/configuration.json'
     }
     parameters {
         choice(name: 'SWITCHING_TO', choices: ['ACTIVE', 'FAILOVER'], description: 'Select the environment')
