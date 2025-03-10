@@ -3,8 +3,8 @@
     "failover_region": "us-east-2",
     "triggers": [
       {
-        "active_bucket": "test-danial",
-        "failover_bucket": "test-danial-v2"
+        "active_bucket": "danial-test-us-east-1",
+        "failover_bucket": "danial-test-us-east-2"
       }
     ]
   }
