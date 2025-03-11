@@ -3,8 +3,8 @@
   "failover_region": "us-east-2",
   "s3_trigger_configuration": [
     {
-      "active_bucket_name": "danial-test-v1",
-      "failover_bucket_name": "danial-test-v2",
+      "active_bucket_name": "danial-test-v2",
+      "failover_bucket_name": "danial-test-v1",
       "event_notifications": {
         "lambda_triggers": [
           {
