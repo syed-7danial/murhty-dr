@@ -354,6 +354,8 @@
 //     custom_logging(chalk.red("Error: ") + error.message);
 //   });
 
+// 
+
 const { custom_logging } = require('../../helper/helper.js');
 const AWS = require('aws-sdk');
 const chalk = require('chalk');
@@ -378,16 +380,6 @@ const readAndParseFile = async (file) => {
   return JSON.parse(data);
 };
 
-const getBucketRegion = async (bucketName) => {
-  try {
-    const location = await s3.getBucketLocation({ Bucket: bucketName }).promise();
-    return location.LocationConstraint || 'us-east-1';
-  } catch (error) {
-    custom_logging(chalk.red(`Error getting region for bucket ${bucketName}: ${error.message}`));
-    throw error;
-  }
-};
-
 const copyEventNotifications = async (triggers) => {
   custom_logging(chalk.green("Starting S3 Event Notification Copy"));
   
@@ -397,57 +389,43 @@ const copyEventNotifications = async (triggers) => {
       const activeConfig = await s3.getBucketNotificationConfiguration({ Bucket: active_bucket_name }).promise();
       const newConfig = { LambdaFunctionConfigurations: [], QueueConfigurations: [], TopicConfigurations: [] };
       
-      const failoverRegion = await getBucketRegion(failover_bucket_name);
-      
       // Process Lambda triggers
       if (event_notifications.lambda_triggers) {
-        for (const lambda of event_notifications.lambda_triggers) {
-          const lambdaConfig = activeConfig.LambdaFunctionConfigurations.find(config => config.LambdaFunctionArn.includes(lambda.active_lambda));
-          if (lambdaConfig) {
-            if (!lambdaConfig.LambdaFunctionArn.includes(failoverRegion)) {
-              custom_logging(chalk.red(`Lambda function ${lambda.failover_lambda} is in a different region than bucket ${failover_bucket_name}`));
-              continue;
-            }
+        event_notifications.lambda_triggers.forEach(lambda => {
+          const lambdaConfigs = activeConfig.LambdaFunctionConfigurations.filter(config => config.LambdaFunctionArn.includes(lambda.active_lambda));
+          lambdaConfigs.forEach(lambdaConfig => {
             newConfig.LambdaFunctionConfigurations.push({
               ...lambdaConfig,
               LambdaFunctionArn: lambdaConfig.LambdaFunctionArn.replace(lambda.active_lambda, lambda.failover_lambda)
             });
-          }
-        }
+          });
+        });
       }
       
       // Process SNS triggers
       if (event_notifications.sns_triggers) {
-        for (const sns of event_notifications.sns_triggers) {
-          const snsConfig = activeConfig.TopicConfigurations.find(config => config.TopicArn.includes(sns.active_sns));
-          if (snsConfig) {
-            if (!snsConfig.TopicArn.includes(failoverRegion)) {
-              custom_logging(chalk.red(`SNS topic ${sns.failover_sns} is in a different region than bucket ${failover_bucket_name}`));
-              continue;
-            }
+        event_notifications.sns_triggers.forEach(sns => {
+          const snsConfigs = activeConfig.TopicConfigurations.filter(config => config.TopicArn.includes(sns.active_sns));
+          snsConfigs.forEach(snsConfig => {
             newConfig.TopicConfigurations.push({
               ...snsConfig,
               TopicArn: snsConfig.TopicArn.replace(sns.active_sns, sns.failover_sns)
             });
-          }
-        }
+          });
+        });
       }
       
       // Process SQS triggers
       if (event_notifications.sqs_triggers) {
-        for (const sqs of event_notifications.sqs_triggers) {
-          const sqsConfig = activeConfig.QueueConfigurations.find(config => config.QueueArn.includes(sqs.active_sqs));
-          if (sqsConfig) {
-            if (!sqsConfig.QueueArn.includes(failoverRegion)) {
-              custom_logging(chalk.red(`SQS queue ${sqs.failover_sqs} is in a different region than bucket ${failover_bucket_name}`));
-              continue;
-            }
+        event_notifications.sqs_triggers.forEach(sqs => {
+          const sqsConfigs = activeConfig.QueueConfigurations.filter(config => config.QueueArn.includes(sqs.active_sqs));
+          sqsConfigs.forEach(sqsConfig => {
             newConfig.QueueConfigurations.push({
               ...sqsConfig,
               QueueArn: sqsConfig.QueueArn.replace(sqs.active_sqs, sqs.failover_sqs)
             });
-          }
-        }
+          });
+        });
       }
       
       await s3.putBucketNotificationConfiguration({
