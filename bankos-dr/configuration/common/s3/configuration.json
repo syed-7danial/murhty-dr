@@ -21,7 +21,7 @@
         "sqs_triggers": [
           {
             "active_sqs": "dani-sqs",
-            "failover_sqs": "test-hasnain"
+            "failover_sqs": "danial-test-2"
           }
         ]
       }
