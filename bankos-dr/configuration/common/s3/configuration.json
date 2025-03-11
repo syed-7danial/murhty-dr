@@ -1,11 +1,30 @@
 {
-    "active_region": "us-east-1",
-    "failover_region": "us-east-2",
-    "triggers": [
-      {
-        "active_bucket": "danial-test-us-east-1",
-        "failover_bucket": "danial-test-us-east-2"
+  "active_region": "us-east-1",
+  "failover_region": "us-east-2",
+  "s3_trigger_configuration": [
+    {
+      "active_bucket_name": "danial-test-v1",
+      "failover_bucket_name": "danial-test-v2",
+      "event_notifications": {
+        "lambda_triggers": [
+          {
+            "active_lambda": "danial-test-1",
+            "failover_lambda": "danial-test-2"
+          }
+        ],
+        "sns_triggers": [
+          {
+            "active_sns": "hammad_sns",
+            "failover_sns": "danial-test-2"
+          }
+        ],
+        "sqs_triggers": [
+          {
+            "active_sqs": "dani-sqs",
+            "failover_sqs": "test-hasnain"
+          }
+        ]
       }
-    ]
-  }
-  
+    }
+  ]
+}
