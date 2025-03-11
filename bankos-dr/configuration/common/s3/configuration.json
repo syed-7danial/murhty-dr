@@ -1,6 +1,6 @@
 {
-  "active_region": "us-east-2",
-  "failover_region": "us-east-1",
+  "active_region": "us-east-1",
+  "failover_region": "us-east-2",
   "s3_trigger_configuration": [
     {
       "active_bucket_name": "danial-test-v1",

@@ -7,15 +7,6 @@ const path = require('path');
 const { program } = require('commander');
 
 const readFileAsync = promisify(fs.readFile);
-AWS.config.update({
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  sessionToken: process.env.AWS_SESSION_TOKEN,
-  maxRetries: 5,
-  retryDelayOptions: { base: 200 }
-});
-
-const s3 = new AWS.S3();
 
 const readAndParseFile = async (file) => {
   const data = await readFileAsync(file, { encoding: 'utf-8' });
@@ -24,33 +15,38 @@ const readAndParseFile = async (file) => {
 
 const replicateEventNotifications = async (config) => {
   try {
-    const { active_bucket_name, failover_bucket_name, event_notifications } = config;
-    custom_logging(chalk.green(`Fetching event notifications for ${active_bucket_name}`));
-    const activeConfig = await s3.getBucketNotificationConfiguration({ Bucket: active_bucket_name }).promise();
-    
+    const { active_region, failover_region, active_bucket_name, failover_bucket_name, event_notifications } = config;
+
+    custom_logging(chalk.green(`Fetching event notifications from ${active_bucket_name} in ${active_region}`));
+
+    // Set AWS SDK to active region
+    const activeS3 = new AWS.S3({ region: active_region });
+    const activeConfig = await activeS3.getBucketNotificationConfiguration({ Bucket: active_bucket_name }).promise();
+
+    // Switch to failover region
+    const failoverS3 = new AWS.S3({ region: failover_region });
+
+    // Function to map triggers based on config
+    const mapTriggers = (configurations, triggerType, mappingKey) =>
+      configurations?.map(config => {
+        const triggerMapping = event_notifications[mappingKey].find(trigger => trigger[`active_${triggerType}`] === config[`${triggerType}Arn`].split(':').pop());
+        return triggerMapping ? { ...config, [`${triggerType}Arn`]: config[`${triggerType}Arn`].replace(/[^:]+$/, triggerMapping[`failover_${triggerType}`]) } : null;
+      }).filter(Boolean) || [];
+
+    // Generate new event configuration for failover
     const newConfig = {
-      LambdaFunctionConfigurations: activeConfig.LambdaFunctionConfigurations?.map(config => {
-        const failoverLambda = event_notifications.lambda_triggers.find(trigger => trigger.active_lambda === config.LambdaFunctionArn.split(':').pop());
-        return failoverLambda ? { ...config, LambdaFunctionArn: config.LambdaFunctionArn.replace(config.LambdaFunctionArn.split(':').pop(), failoverLambda.failover_lambda) } : null;
-      }).filter(Boolean) || [],
-      
-      QueueConfigurations: activeConfig.QueueConfigurations?.map(config => {
-        const failoverSqs = event_notifications.sqs_triggers.find(trigger => trigger.active_sqs === config.QueueArn.split(':').pop());
-        return failoverSqs ? { ...config, QueueArn: config.QueueArn.replace(config.QueueArn.split(':').pop(), failoverSqs.failover_sqs) } : null;
-      }).filter(Boolean) || [],
-      
-      TopicConfigurations: activeConfig.TopicConfigurations?.map(config => {
-        const failoverSns = event_notifications.sns_triggers.find(trigger => trigger.active_sns === config.TopicArn.split(':').pop());
-        return failoverSns ? { ...config, TopicArn: config.TopicArn.replace(config.TopicArn.split(':').pop(), failoverSns.failover_sns) } : null;
-      }).filter(Boolean) || []
+      LambdaFunctionConfigurations: mapTriggers(activeConfig.LambdaFunctionConfigurations, "LambdaFunction", "lambda_triggers"),
+      QueueConfigurations: mapTriggers(activeConfig.QueueConfigurations, "Queue", "sqs_triggers"),
+      TopicConfigurations: mapTriggers(activeConfig.TopicConfigurations, "Topic", "sns_triggers")
     };
-    
-    await s3.putBucketNotificationConfiguration({
+
+    // Apply updated event notifications to the failover bucket
+    await failoverS3.putBucketNotificationConfiguration({
       Bucket: failover_bucket_name,
       NotificationConfiguration: newConfig
     }).promise();
-    
-    custom_logging(chalk.green(`Successfully copied event notifications from ${active_bucket_name} to ${failover_bucket_name}`));
+
+    custom_logging(chalk.green(`Successfully replicated event notifications to ${failover_bucket_name} in ${failover_region}`));
   } catch (error) {
     custom_logging(chalk.red(`Error replicating event notifications: ${error.message}`));
   }
@@ -64,7 +60,7 @@ const mainFunction = async () => {
 
   const options = program.opts();
   const file = path.resolve(__dirname, '..', '..', 'configuration', "common", 's3', 'configuration.json');
-  let envs = await readAndParseFile(file);
+  let config = await readAndParseFile(file);
 
   if (options.dryRun) {
     global.DRY_RUN = true;
@@ -73,8 +69,8 @@ const mainFunction = async () => {
     custom_logging(chalk.red("DRY RUN is disabled"));
   }
 
-  custom_logging(`Switching to ${chalk.green(envs.failover_region)} environment`);
-  await replicateEventNotifications(envs.s3_trigger_configuration[0]);
+  custom_logging(`Switching to ${chalk.green(config.failover_region)} environment`);
+  await replicateEventNotifications(config.s3_trigger_configuration[0]);
   custom_logging(chalk.green("Process has been completed"));
 };
 
