@@ -20,7 +20,7 @@
         ],
         "sqs_triggers": [
           {
-            "active_sqs": "dani-sqs",
+            "active_sqs": "danial-test-1",
             "failover_sqs": "danial-test-2"
           }
         ]
