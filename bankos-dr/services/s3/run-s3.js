@@ -156,11 +156,11 @@ const processS3NotificationConfigurations = async (config) => {
   const activeRegion = config.active_region;
   const failoverRegion = config.failover_region;
   
-  // The region we're working on (chosen region)
-  const chosenRegion = process.env.CHOSEN_REGION;
+  // Get the chosen region from environment variable - use SWITCHING_TO instead of CHOSEN_REGION
+  const chosenRegion = process.env.SWITCHING_TO;
   
   if (!chosenRegion || (chosenRegion !== "ACTIVE" && chosenRegion !== "FAILOVER")) {
-    throw new Error('CHOSEN_REGION environment variable must be either "ACTIVE" or "FAILOVER"');
+    throw new Error('SWITCHING_TO environment variable must be either "ACTIVE" or "FAILOVER"');
   }
   
   // Initialize AWS clients
@@ -283,24 +283,27 @@ const mainFunction = async () => {
 
   const options = program.opts();
   
+  // Updated path to match the structure in your Jenkins pipeline
   const file = path.resolve(__dirname, '..', '..', 'configuration', "common", 's3', 'configuration.json');
   let config = await readAndParseFile(file);
 
-  if (options.dryRun) {
+  // Check for DRY_RUN from environment variable (for Jenkins)
+  if (options.dryRun || process.env.DRY_RUN === 'true') {
     global.DRY_RUN = true;
     custom_logging(chalk.yellow("DRY RUN is enabled"));
   } else {
     custom_logging(chalk.red("DRY RUN is disabled"));
   }
 
-  if (options.processCurrentEnvironment) {
+  // Check for PROCESS_CURRENT_ENV from environment variable (for Jenkins)
+  if (options.processCurrentEnvironment || process.env.PROCESS_CURRENT_ENV === 'true') {
     global.PROCESS_CURRENT_ENVIRONMENT = true;
     custom_logging(chalk.red("Current environment will be processed"));
   } else {
     custom_logging(chalk.yellow("Current environment will not be processed"));
   }
 
-  custom_logging(`Chosen region: ${chalk.green(process.env.CHOSEN_REGION)}`);
+  custom_logging(`Chosen region: ${chalk.green(process.env.SWITCHING_TO)}`);
 
   await processS3NotificationConfigurations(config);
   custom_logging(chalk.green("Process has been completed"));
