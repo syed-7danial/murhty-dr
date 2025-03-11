@@ -378,6 +378,16 @@ const readAndParseFile = async (file) => {
   return JSON.parse(data);
 };
 
+const getBucketRegion = async (bucketName) => {
+  try {
+    const location = await s3.getBucketLocation({ Bucket: bucketName }).promise();
+    return location.LocationConstraint || 'us-east-1';
+  } catch (error) {
+    custom_logging(chalk.red(`Error getting region for bucket ${bucketName}: ${error.message}`));
+    throw error;
+  }
+};
+
 const copyEventNotifications = async (triggers) => {
   custom_logging(chalk.green("Starting S3 Event Notification Copy"));
   
@@ -387,11 +397,17 @@ const copyEventNotifications = async (triggers) => {
       const activeConfig = await s3.getBucketNotificationConfiguration({ Bucket: active_bucket_name }).promise();
       const newConfig = { LambdaFunctionConfigurations: [], QueueConfigurations: [], TopicConfigurations: [] };
       
+      const failoverRegion = await getBucketRegion(failover_bucket_name);
+      
       // Process Lambda triggers
       if (event_notifications.lambda_triggers) {
         for (const lambda of event_notifications.lambda_triggers) {
           const lambdaConfig = activeConfig.LambdaFunctionConfigurations.find(config => config.LambdaFunctionArn.includes(lambda.active_lambda));
           if (lambdaConfig) {
+            if (!lambdaConfig.LambdaFunctionArn.includes(failoverRegion)) {
+              custom_logging(chalk.red(`Lambda function ${lambda.failover_lambda} is in a different region than bucket ${failover_bucket_name}`));
+              continue;
+            }
             newConfig.LambdaFunctionConfigurations.push({
               ...lambdaConfig,
               LambdaFunctionArn: lambdaConfig.LambdaFunctionArn.replace(lambda.active_lambda, lambda.failover_lambda)
@@ -405,6 +421,10 @@ const copyEventNotifications = async (triggers) => {
         for (const sns of event_notifications.sns_triggers) {
           const snsConfig = activeConfig.TopicConfigurations.find(config => config.TopicArn.includes(sns.active_sns));
           if (snsConfig) {
+            if (!snsConfig.TopicArn.includes(failoverRegion)) {
+              custom_logging(chalk.red(`SNS topic ${sns.failover_sns} is in a different region than bucket ${failover_bucket_name}`));
+              continue;
+            }
             newConfig.TopicConfigurations.push({
               ...snsConfig,
               TopicArn: snsConfig.TopicArn.replace(sns.active_sns, sns.failover_sns)
@@ -418,6 +438,10 @@ const copyEventNotifications = async (triggers) => {
         for (const sqs of event_notifications.sqs_triggers) {
           const sqsConfig = activeConfig.QueueConfigurations.find(config => config.QueueArn.includes(sqs.active_sqs));
           if (sqsConfig) {
+            if (!sqsConfig.QueueArn.includes(failoverRegion)) {
+              custom_logging(chalk.red(`SQS queue ${sqs.failover_sqs} is in a different region than bucket ${failover_bucket_name}`));
+              continue;
+            }
             newConfig.QueueConfigurations.push({
               ...sqsConfig,
               QueueArn: sqsConfig.QueueArn.replace(sqs.active_sqs, sqs.failover_sqs)
