@@ -108,55 +108,13 @@ const getSqsArnByName = async (sqsClient, sqsName) => {
   }
 };
 
-const replaceResourceArns = async (notificationConfig, resourceMappings) => {
-  const newConfig = JSON.parse(JSON.stringify(notificationConfig)); // Deep copy
-  
-  // Replace Lambda ARNs
-  if (newConfig.LambdaFunctionConfigurations && newConfig.LambdaFunctionConfigurations.length > 0) {
-    for (let config of newConfig.LambdaFunctionConfigurations) {
-      for (const [sourceArn, targetArn] of Object.entries(resourceMappings.lambdaArns)) {
-        if (config.LambdaFunctionArn === sourceArn) {
-          config.LambdaFunctionArn = targetArn;
-          custom_logging(chalk.cyan(`Replaced Lambda ARN: ${sourceArn} -> ${targetArn}`));
-        }
-      }
-    }
-  }
-  
-  // Replace SNS ARNs
-  if (newConfig.TopicConfigurations && newConfig.TopicConfigurations.length > 0) {
-    for (let config of newConfig.TopicConfigurations) {
-      for (const [sourceArn, targetArn] of Object.entries(resourceMappings.snsArns)) {
-        if (config.TopicArn === sourceArn) {
-          config.TopicArn = targetArn;
-          custom_logging(chalk.cyan(`Replaced SNS Topic ARN: ${sourceArn} -> ${targetArn}`));
-        }
-      }
-    }
-  }
-  
-  // Replace SQS ARNs
-  if (newConfig.QueueConfigurations && newConfig.QueueConfigurations.length > 0) {
-    for (let config of newConfig.QueueConfigurations) {
-      for (const [sourceArn, targetArn] of Object.entries(resourceMappings.sqsArns)) {
-        if (config.QueueArn === sourceArn) {
-          config.QueueArn = targetArn;
-          custom_logging(chalk.cyan(`Replaced SQS Queue ARN: ${sourceArn} -> ${targetArn}`));
-        }
-      }
-    }
-  }
-  
-  return newConfig;
-};
-
 const processS3NotificationConfigurations = async (config) => {
   custom_logging(chalk.green("Starting process for S3 notification configurations"));
   
   const activeRegion = config.active_region;
   const failoverRegion = config.failover_region;
   
-  // Get the chosen region from environment variable - use SWITCHING_TO instead of CHOSEN_REGION
+  // Get the chosen region from environment variable
   const chosenRegion = process.env.SWITCHING_TO;
   
   if (!chosenRegion || (chosenRegion !== "ACTIVE" && chosenRegion !== "FAILOVER")) {
@@ -191,72 +149,60 @@ const processS3NotificationConfigurations = async (config) => {
     
     custom_logging(chalk.cyan(`Processing bucket pair: ${sourceBucketName} -> ${targetBucketName}`));
     
-    // Build resource ARN mappings
-    const resourceMappings = {
-      lambdaArns: {},
-      snsArns: {},
-      sqsArns: {}
+    // Create resource name mappings
+    const resourceNameMappings = {
+      lambda: {},
+      sns: {},
+      sqs: {}
     };
     
-    // Process Lambda trigger mappings
+    // Process Lambda mappings
     if (s3Config.event_notifications.lambda_triggers && s3Config.event_notifications.lambda_triggers.length > 0) {
-      custom_logging(chalk.cyan("Building Lambda ARN mappings"));
+      custom_logging(chalk.cyan("Building Lambda name mappings"));
       
       for (const lambdaTrigger of s3Config.event_notifications.lambda_triggers) {
         const activeLambdaName = lambdaTrigger.active_lambda;
         const failoverLambdaName = lambdaTrigger.failover_lambda;
         
-        // Get ARNs for the Lambda functions
-        const activeLambdaArn = await getLambdaArnByName(activeLambda, activeLambdaName);
-        const failoverLambdaArn = await getLambdaArnByName(failoverLambda, failoverLambdaName);
-        
         // Map appropriately based on chosen region
         if (chosenRegion === "ACTIVE") {
-          resourceMappings.lambdaArns[activeLambdaArn] = failoverLambdaArn;
+          resourceNameMappings.lambda[activeLambdaName] = failoverLambdaName;
         } else {
-          resourceMappings.lambdaArns[failoverLambdaArn] = activeLambdaArn;
+          resourceNameMappings.lambda[failoverLambdaName] = activeLambdaName;
         }
       }
     }
     
-    // Process SNS trigger mappings
+    // Process SNS mappings
     if (s3Config.event_notifications.sns_triggers && s3Config.event_notifications.sns_triggers.length > 0) {
-      custom_logging(chalk.cyan("Building SNS ARN mappings"));
+      custom_logging(chalk.cyan("Building SNS name mappings"));
       
       for (const snsTrigger of s3Config.event_notifications.sns_triggers) {
         const activeSnsName = snsTrigger.active_sns;
         const failoverSnsName = snsTrigger.failover_sns;
         
-        // Get ARNs for the SNS topics
-        const activeSnsArn = await getSnsArnByName(activeSns, activeSnsName);
-        const failoverSnsArn = await getSnsArnByName(failoverSns, failoverSnsName);
-        
         // Map appropriately based on chosen region
         if (chosenRegion === "ACTIVE") {
-          resourceMappings.snsArns[activeSnsArn] = failoverSnsArn;
+          resourceNameMappings.sns[activeSnsName] = failoverSnsName;
         } else {
-          resourceMappings.snsArns[failoverSnsArn] = activeSnsArn;
+          resourceNameMappings.sns[failoverSnsName] = activeSnsName;
         }
       }
     }
     
-    // Process SQS trigger mappings
+    // Process SQS mappings
     if (s3Config.event_notifications.sqs_triggers && s3Config.event_notifications.sqs_triggers.length > 0) {
-      custom_logging(chalk.cyan("Building SQS ARN mappings"));
+      custom_logging(chalk.cyan("Building SQS name mappings"));
       
       for (const sqsTrigger of s3Config.event_notifications.sqs_triggers) {
         const activeSqsName = sqsTrigger.active_sqs;
         const failoverSqsName = sqsTrigger.failover_sqs;
         
-        // Get ARNs for the SQS queues
-        const activeSqsArn = await getSqsArnByName(activeSqs, activeSqsName);
-        const failoverSqsArn = await getSqsArnByName(failoverSqs, failoverSqsName);
-        
         // Map appropriately based on chosen region
         if (chosenRegion === "ACTIVE") {
-          resourceMappings.sqsArns[activeSqsArn] = failoverSqsArn;
+          resourceNameMappings.sqs[activeSqsName] = failoverSqsName;
         } else {
-          resourceMappings.sqsArns[failoverSqsArn] = activeSqsArn;
+          resourceNameMappings.sqs[failoverSqsName] = activeSqsName;
         }
       }
     }
@@ -264,11 +210,102 @@ const processS3NotificationConfigurations = async (config) => {
     // Get current notification configuration from source bucket
     const sourceNotificationConfig = await getS3BucketNotificationConfiguration(sourceS3, sourceBucketName);
     
-    // Replace ARNs in the notification configuration
-    const updatedNotificationConfig = await replaceResourceArns(sourceNotificationConfig, resourceMappings);
+    // Create a new notification configuration for target bucket
+    const targetNotificationConfig = {
+      LambdaFunctionConfigurations: [],
+      TopicConfigurations: [],
+      QueueConfigurations: []
+    };
     
-    // Apply the updated notification configuration to the target bucket
-    await putS3BucketNotificationConfiguration(targetS3, targetBucketName, updatedNotificationConfig);
+    // Copy and transform Lambda configurations
+    if (sourceNotificationConfig.LambdaFunctionConfigurations) {
+      for (const lambdaConfig of sourceNotificationConfig.LambdaFunctionConfigurations) {
+        // Extract the Lambda function name from the ARN
+        const arnParts = lambdaConfig.LambdaFunctionArn.split(':');
+        const sourceLambdaName = arnParts[arnParts.length - 1];
+        
+        // Check if we have a mapping for this Lambda function
+        const targetLambdaName = resourceNameMappings.lambda[sourceLambdaName];
+        
+        if (targetLambdaName) {
+          // Create a new configuration with the target Lambda function
+          const targetLambdaArn = await getLambdaArnByName(
+            chosenRegion === "ACTIVE" ? failoverLambda : activeLambda, 
+            targetLambdaName
+          );
+          
+          const newLambdaConfig = JSON.parse(JSON.stringify(lambdaConfig));
+          newLambdaConfig.LambdaFunctionArn = targetLambdaArn;
+          
+          targetNotificationConfig.LambdaFunctionConfigurations.push(newLambdaConfig);
+          
+          custom_logging(chalk.cyan(`Added Lambda configuration for ${targetLambdaName}`));
+        } else {
+          custom_logging(chalk.yellow(`No mapping found for Lambda function ${sourceLambdaName}, skipping`));
+        }
+      }
+    }
+    
+    // Copy and transform SNS configurations
+    if (sourceNotificationConfig.TopicConfigurations) {
+      for (const topicConfig of sourceNotificationConfig.TopicConfigurations) {
+        // Extract the SNS topic name from the ARN
+        const arnParts = topicConfig.TopicArn.split(':');
+        const sourceTopicName = arnParts[arnParts.length - 1];
+        
+        // Check if we have a mapping for this SNS topic
+        const targetTopicName = resourceNameMappings.sns[sourceTopicName];
+        
+        if (targetTopicName) {
+          // Create a new configuration with the target SNS topic
+          const targetTopicArn = await getSnsArnByName(
+            chosenRegion === "ACTIVE" ? failoverSns : activeSns, 
+            targetTopicName
+          );
+          
+          const newTopicConfig = JSON.parse(JSON.stringify(topicConfig));
+          newTopicConfig.TopicArn = targetTopicArn;
+          
+          targetNotificationConfig.TopicConfigurations.push(newTopicConfig);
+          
+          custom_logging(chalk.cyan(`Added SNS configuration for ${targetTopicName}`));
+        } else {
+          custom_logging(chalk.yellow(`No mapping found for SNS topic ${sourceTopicName}, skipping`));
+        }
+      }
+    }
+    
+    // Copy and transform SQS configurations
+    if (sourceNotificationConfig.QueueConfigurations) {
+      for (const queueConfig of sourceNotificationConfig.QueueConfigurations) {
+        // Extract the SQS queue name from the ARN
+        const arnParts = queueConfig.QueueArn.split(':');
+        const sourceQueueName = arnParts[arnParts.length - 1];
+        
+        // Check if we have a mapping for this SQS queue
+        const targetQueueName = resourceNameMappings.sqs[sourceQueueName];
+        
+        if (targetQueueName) {
+          // Create a new configuration with the target SQS queue
+          const targetQueueArn = await getSqsArnByName(
+            chosenRegion === "ACTIVE" ? failoverSqs : activeSqs, 
+            targetQueueName
+          );
+          
+          const newQueueConfig = JSON.parse(JSON.stringify(queueConfig));
+          newQueueConfig.QueueArn = targetQueueArn;
+          
+          targetNotificationConfig.QueueConfigurations.push(newQueueConfig);
+          
+          custom_logging(chalk.cyan(`Added SQS configuration for ${targetQueueName}`));
+        } else {
+          custom_logging(chalk.yellow(`No mapping found for SQS queue ${sourceQueueName}, skipping`));
+        }
+      }
+    }
+    
+    // Apply the new notification configuration to the target bucket
+    await putS3BucketNotificationConfiguration(targetS3, targetBucketName, targetNotificationConfig);
   }
   
   custom_logging(chalk.green("S3 notification configuration copy process completed"));
