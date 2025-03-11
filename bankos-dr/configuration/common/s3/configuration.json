@@ -1,10 +1,10 @@
 {
-  "active_region": "us-east-1",
-  "failover_region": "us-east-2",
+  "active_region": "us-east-2",
+  "failover_region": "us-east-1",
   "s3_trigger_configuration": [
     {
-      "active_bucket_name": "danial-test-v2",
-      "failover_bucket_name": "danial-test-v1",
+      "active_bucket_name": "danial-test-v1",
+      "failover_bucket_name": "danial-test-v2",
       "event_notifications": {
         "lambda_triggers": [
           {
@@ -14,7 +14,7 @@
         ],
         "sns_triggers": [
           {
-            "active_sns": "hammad_sns",
+            "active_sns": "danial-test-1",
             "failover_sns": "danial-test-2"
           }
         ],
