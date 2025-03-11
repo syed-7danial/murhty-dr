@@ -16,13 +16,11 @@ AWS.config.update({
   retryDelayOptions: { base: 200 },
 });
 
-// Read and parse configuration file
 const readAndParseFile = async (file) => {
   const data = await readFileAsync(file, { encoding: 'utf-8' });
   return JSON.parse(data);
 };
 
-// Function to replace ARNs with the target region
 const updateArnRegion = (arn, sourceRegion, targetRegion) => {
   if (arn.includes(`:${sourceRegion}:`)) {
     return arn.replace(`:${sourceRegion}:`, `:${targetRegion}:`);
@@ -31,20 +29,17 @@ const updateArnRegion = (arn, sourceRegion, targetRegion) => {
   return arn;
 };
 
-// Function to copy and modify S3 event notifications
 const copyS3EventNotifications = async (s3Settings) => {
   custom_logging(chalk.green("Starting S3 Event Notification Copy Process"));
 
   let sourceRegion, targetRegion, sourceBucket, targetBucket;
 
   if (s3Settings.switching_to === "ACTIVE") {
-    // Switching to ACTIVE means we're copying FROM failover TO active
     sourceRegion = s3Settings.failover_region;
     targetRegion = s3Settings.active_region;
     sourceBucket = s3Settings.triggers[0].failover_bucket;
     targetBucket = s3Settings.triggers[0].active_bucket;
   } else {
-    // Switching to FAILOVER means we're copying FROM active TO failover
     sourceRegion = s3Settings.active_region;
     targetRegion = s3Settings.failover_region;
     sourceBucket = s3Settings.triggers[0].active_bucket;
