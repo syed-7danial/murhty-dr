@@ -1,204 +1,91 @@
-const { program } = require('commander');
-const fs = require('fs');
-const { promisify } = require('util');
-const chalk = require('chalk');
-const path = require('path');
-const readFileAsync = promisify(fs.readFile);
+const { custom_logging } = require('../../helper/helper.js');
 const AWS = require('aws-sdk');
+const chalk = require('chalk');
+const { promisify } = require('util');
+const fs = require('fs');
+const path = require('path');
+const { program } = require('commander');
 
-// Configure AWS SDK
-AWS.config.update({
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  sessionToken: process.env.AWS_SESSION_TOKEN,
-  maxRetries: 5,
-  retryDelayOptions: { base: 200 }
-});
+const readFileAsync = promisify(fs.readFile);
 
-// Helper function to read and parse JSON configuration file
 const readAndParseFile = async (file) => {
   const data = await readFileAsync(file, { encoding: 'utf-8' });
   return JSON.parse(data);
 };
 
-// Custom logging function
-const custom_logging = (message) => {
-  console.log(message);
-};
-
-// Function to replicate S3 event notifications between buckets
-const replicateS3EventNotifications = async (config, direction) => {
-  custom_logging(chalk.green(`Starting S3 event notifications replication (${direction})`));
-
-  const activeRegion = config.active_region;
-  const failoverRegion = config.failover_region;
-  
-  // Extract bucket information from the config
-  const activeBucket = config.triggers[0].active_bucket;
-  const failoverBucket = config.triggers[0].failover_bucket;
-
-  // Determine source and destination based on direction
-  let sourceRegion, sourceBucket, destinationRegion, destinationBucket;
-  
-  if (direction === 'active-to-failover') {
-    sourceRegion = activeRegion;
-    sourceBucket = activeBucket;
-    destinationRegion = failoverRegion;
-    destinationBucket = failoverBucket;
-  } else { // failover-to-active
-    sourceRegion = failoverRegion;
-    sourceBucket = failoverBucket;
-    destinationRegion = activeRegion;
-    destinationBucket = activeBucket;
-  }
-
-  // Create S3 clients for source and destination regions
-  const sourceS3 = new AWS.S3({ region: sourceRegion });
-  const destinationS3 = new AWS.S3({ region: destinationRegion });
-
+const replicateEventNotifications = async (config) => {
   try {
-    custom_logging(chalk.blue(`Fetching event notifications from ${sourceBucket} in ${sourceRegion}`));
-    
-    // Fetch notification configuration from the source bucket
-    const sourceConfig = await sourceS3.getBucketNotificationConfiguration({ 
-      Bucket: sourceBucket 
-    }).promise();
+    const { active_bucket_name, failover_bucket_name, active_region, failover_region, event_notifications } = config;
 
-    // Prepare the new notification configuration for the destination bucket
-    const updatedConfig = { 
-      LambdaFunctionConfigurations: [], 
-      QueueConfigurations: [], 
-      TopicConfigurations: [] 
+    const s3Active = new AWS.S3({ region: active_region });
+    const s3Failover = new AWS.S3({ region: failover_region });
+
+    custom_logging(chalk.green(`Fetching event notifications from ${active_bucket_name} in ${active_region}`));
+
+    const activeConfig = await s3Active.getBucketNotificationConfiguration({ Bucket: active_bucket_name }).promise();
+
+    const updateArnRegion = (arn, newRegion) => {
+      const arnParts = arn.split(":");
+      arnParts[3] = newRegion; // AWS region is the 4th part in ARN
+      return arnParts.join(":");
     };
 
-    // Handle Lambda function configurations
-    if (sourceConfig.LambdaFunctionConfigurations && sourceConfig.LambdaFunctionConfigurations.length > 0) {
-      custom_logging(chalk.blue(`Found ${sourceConfig.LambdaFunctionConfigurations.length} Lambda function configurations`));
-      
-      sourceConfig.LambdaFunctionConfigurations.forEach(lambdaConfig => {
-        // Extract the function name and replace the region in the ARN
-        const lambdaArn = lambdaConfig.LambdaFunctionArn;
-        const updatedLambdaArn = lambdaArn.replace(
-          `:lambda:${sourceRegion}:`, 
-          `:lambda:${destinationRegion}:`
-        );
+    const newConfig = {
+      LambdaFunctionConfigurations: activeConfig.LambdaFunctionConfigurations?.map(config => ({
+        ...config,
+        LambdaFunctionArn: updateArnRegion(config.LambdaFunctionArn, failover_region)
+      })) || [],
 
-        updatedConfig.LambdaFunctionConfigurations.push({
-          ...lambdaConfig,
-          LambdaFunctionArn: updatedLambdaArn
-        });
-      });
-    }
+      QueueConfigurations: activeConfig.QueueConfigurations?.map(config => ({
+        ...config,
+        QueueArn: updateArnRegion(config.QueueArn, failover_region)
+      })) || [],
 
-    // Handle SNS topic configurations
-    if (sourceConfig.TopicConfigurations && sourceConfig.TopicConfigurations.length > 0) {
-      custom_logging(chalk.blue(`Found ${sourceConfig.TopicConfigurations.length} SNS topic configurations`));
-      
-      sourceConfig.TopicConfigurations.forEach(topicConfig => {
-        // Extract the topic ARN and replace the region
-        const topicArn = topicConfig.TopicArn;
-        const updatedTopicArn = topicArn.replace(
-          `:sns:${sourceRegion}:`, 
-          `:sns:${destinationRegion}:`
-        );
+      TopicConfigurations: activeConfig.TopicConfigurations?.map(config => ({
+        ...config,
+        TopicArn: updateArnRegion(config.TopicArn, failover_region)
+      })) || []
+    };
 
-        updatedConfig.TopicConfigurations.push({
-          ...topicConfig,
-          TopicArn: updatedTopicArn
-        });
-      });
-    }
+    await s3Failover.putBucketNotificationConfiguration({
+      Bucket: failover_bucket_name,
+      NotificationConfiguration: newConfig
+    }).promise();
 
-    // Handle SQS queue configurations
-    if (sourceConfig.QueueConfigurations && sourceConfig.QueueConfigurations.length > 0) {
-      custom_logging(chalk.blue(`Found ${sourceConfig.QueueConfigurations.length} SQS queue configurations`));
-      
-      sourceConfig.QueueConfigurations.forEach(queueConfig => {
-        // Extract the queue ARN and replace the region
-        const queueArn = queueConfig.QueueArn;
-        const updatedQueueArn = queueArn.replace(
-          `:sqs:${sourceRegion}:`, 
-          `:sqs:${destinationRegion}:`
-        );
-
-        updatedConfig.QueueConfigurations.push({
-          ...queueConfig,
-          QueueArn: updatedQueueArn
-        });
-      });
-    }
-
-    // Apply the updated configuration to the destination bucket
-    if (global.DRY_RUN) {
-      custom_logging(chalk.yellow('DRY RUN: Would apply the following notification configuration:'));
-      custom_logging(JSON.stringify(updatedConfig, null, 2));
-    } else {
-      custom_logging(chalk.green(`Applying notification configuration to ${destinationBucket} in ${destinationRegion}`));
-      
-      await destinationS3.putBucketNotificationConfiguration({
-        Bucket: destinationBucket,
-        NotificationConfiguration: updatedConfig
-      }).promise();
-      
-      custom_logging(chalk.green('Successfully applied notification configuration'));
-    }
-
-    custom_logging(chalk.green(`Successfully replicated S3 event notifications from ${sourceBucket} to ${destinationBucket}`));
+    custom_logging(chalk.green(`Successfully replicated event notifications to ${failover_bucket_name} in ${failover_region}`));
   } catch (error) {
-    custom_logging(chalk.red(`Error replicating S3 event notifications: ${error.message}`));
-    throw error;
+    custom_logging(chalk.red(`Error replicating event notifications: ${error.message}`));
   }
 };
 
-// Main function
-const main = async () => {
-  // Setup command line options
+const mainFunction = async () => {
   program
-    .version('1.0.0')
-    .option('-c, --config <path>', 'Path to configuration file', './configuration.json')
-    .option('-d, --direction <direction>', 'Replication direction (active-to-failover or failover-to-active)', 'active-to-failover')
-    .option('--dry-run', 'Dry run mode (no changes will be applied)')
+    .version('0.0.1')
+    .option('-dr --dryRun', "Dry run the process")
     .parse(process.argv);
 
   const options = program.opts();
-  
-  // Set dry run flag if specified
+  const file = path.resolve(__dirname, '..', '..', 'configuration', "common", 's3', 'configuration.json');
+
+  let config = await readAndParseFile(file);
+  const { active_region, failover_region } = config;
+
   if (options.dryRun) {
     global.DRY_RUN = true;
-    custom_logging(chalk.yellow('DRY RUN mode enabled - no changes will be applied'));
+    custom_logging(chalk.yellow("DRY RUN is enabled"));
   } else {
-    global.DRY_RUN = false;
+    custom_logging(chalk.red("DRY RUN is disabled"));
   }
 
-  try {
-    // Read configuration file
-    const configPath = path.resolve(options.config);
-    custom_logging(chalk.blue(`Reading configuration from ${configPath}`));
-    
-    const config = await readAndParseFile(configPath);
-    
-    // Validate direction parameter
-    const validDirections = ['active-to-failover', 'failover-to-active'];
-    if (!validDirections.includes(options.direction)) {
-      throw new Error(`Invalid direction: ${options.direction}. Must be one of: ${validDirections.join(', ')}`);
-    }
-
-    // Perform the replication
-    await replicateS3EventNotifications(config, options.direction);
-    
-    custom_logging(chalk.green('Event notification replication completed successfully'));
-  } catch (error) {
-    custom_logging(chalk.red(`Error: ${error.message}`));
-    process.exit(1);
-  }
+  custom_logging(`Switching to ${chalk.green(failover_region)} environment`);
+  await replicateEventNotifications({ ...config.s3_trigger_configuration[0], active_region, failover_region });
+  custom_logging(chalk.green("Process has been completed"));
 };
 
-// Execute the main function
-main()
+mainFunction()
   .then(() => {
-    custom_logging(chalk.green('Exiting...'));
+    custom_logging(chalk.green("Exiting ..."));
   })
-  .catch(error => {
-    custom_logging(chalk.red(`Unhandled error: ${error.message}`));
-    process.exit(1);
+  .catch((error) => {
+    custom_logging(chalk.red("Error: ") + error.message);
   });
