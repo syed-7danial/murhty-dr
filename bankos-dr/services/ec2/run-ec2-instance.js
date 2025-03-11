@@ -12,62 +12,97 @@ AWS.config.update({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
   sessionToken: process.env.AWS_SESSION_TOKEN,
-  maxRetries: 5, // Maximum number of retries
-    retryDelayOptions: { 
-        base: 200 // Base delay in milliseconds
-    }
-})
+  maxRetries: 5,
+  retryDelayOptions: { base: 200 }
+});
 
 const readAndParseFile = async (file) => {
   const data = await readFileAsync(file, { encoding: 'utf-8' });
-  const dataToJson = JSON.parse(data);
-  return dataToJson;
+  return JSON.parse(data);
 };
 
-const processEC2Instances = async (ec2Settings) => {
-  custom_logging(chalk.green("Starting process on EC2 instances"));
-  
-  const active_ec2 = new AWS.EC2({ region: ec2Settings.active_region });
-  const failover_ec2 = new AWS.EC2({ region: ec2Settings.failover_region });
-  console.log(ec2Settings)
-  let prodInstanceIds = [];
-  let drInstanceIds = [];
-  prodInstanceIds = ec2Settings.active_instance_id;
-  drInstanceIds = ec2Settings.failover_instance_id;
+const replicateS3EventNotifications = async (config) => {
+  custom_logging(chalk.green("Starting S3 event notifications replication"));
+
+  const activeRegion = config.active_region;
+  const failoverRegion = config.failover_region;
+  const activeBucket = config.s3_trigger_configuration[0].active_bucket_name;
+  const failoverBucket = config.s3_trigger_configuration[0].failover_bucket_name;
+
+  const activeS3 = new AWS.S3({ region: activeRegion });
+  const failoverS3 = new AWS.S3({ region: failoverRegion });
+
   try {
+    // Fetch event notification configuration from the active bucket
+    const activeConfig = await activeS3.getBucketNotificationConfiguration({ Bucket: activeBucket }).promise();
 
-    if (ec2Settings.switching_to === "ACTIVE") {
-      await active_ec2.startInstances({ InstanceIds: prodInstanceIds }).promise();
-      custom_logging(chalk.green('Started ACTIVE REGION Instances'));
+    // Store events based on trigger type
+    const failoverTriggers = config.s3_trigger_configuration[0].event_notifications;
+    const updatedConfig = { LambdaFunctionConfigurations: [], QueueConfigurations: [], TopicConfigurations: [] };
 
-      await failover_ec2.stopInstances({ InstanceIds: drInstanceIds }).promise();
-      custom_logging(chalk.green('Stopped FAILOVER REGION Instances'));
-    } 
-    
-    else {
-      await failover_ec2.startInstances({ InstanceIds: drInstanceIds }).promise();
-      custom_logging(chalk.green('Started FAILOVER REGION Instances'));
+    // Handle Lambda triggers
+    if (activeConfig.LambdaFunctionConfigurations) {
+      activeConfig.LambdaFunctionConfigurations.forEach((lambdaTrigger) => {
+        const activeLambdaName = lambdaTrigger.LambdaFunctionArn.split(":function:")[1];
+        const failoverLambda = failoverTriggers.lambda_triggers.find(lt => lt.active_lambda === activeLambdaName);
 
-      await active_ec2.stopInstances({ InstanceIds: prodInstanceIds }).promise();
-      custom_logging(chalk.green('Stopped ACTIVE REGION Instances'));
+        if (failoverLambda) {
+          updatedConfig.LambdaFunctionConfigurations.push({
+            LambdaFunctionArn: lambdaTrigger.LambdaFunctionArn.replace(activeLambdaName, failoverLambda.failover_lambda),
+            Events: lambdaTrigger.Events
+          });
+        }
+      });
     }
+
+    // Handle SQS triggers
+    if (activeConfig.QueueConfigurations) {
+      activeConfig.QueueConfigurations.forEach((sqsTrigger) => {
+        const activeSqsName = sqsTrigger.QueueArn.split(":sqs:")[1];
+        const failoverSqs = failoverTriggers.sqs_triggers.find(sq => sq.active_sqs === activeSqsName);
+
+        if (failoverSqs) {
+          updatedConfig.QueueConfigurations.push({
+            QueueArn: sqsTrigger.QueueArn.replace(activeSqsName, failoverSqs.failover_sqs),
+            Events: sqsTrigger.Events
+          });
+        }
+      });
+    }
+
+    // Handle SNS triggers
+    if (activeConfig.TopicConfigurations) {
+      activeConfig.TopicConfigurations.forEach((snsTrigger) => {
+        const activeSnsName = snsTrigger.TopicArn.split(":sns:")[1];
+        const failoverSns = failoverTriggers.sns_triggers.find(st => st.active_sns === activeSnsName);
+
+        if (failoverSns) {
+          updatedConfig.TopicConfigurations.push({
+            TopicArn: snsTrigger.TopicArn.replace(activeSnsName, failoverSns.failover_sns),
+            Events: snsTrigger.Events
+          });
+        }
+      });
+    }
+
+    // Apply updated event notifications to failover bucket
+    await failoverS3.putBucketNotificationConfiguration({
+      Bucket: failoverBucket,
+      NotificationConfiguration: updatedConfig
+    }).promise();
+
+    custom_logging(chalk.green("Successfully replicated S3 event notifications to failover bucket"));
   } catch (error) {
-    custom_logging(chalk.red('Error managing instances: ') + error.message);
+    custom_logging(chalk.red("Error replicating S3 event notifications: ") + error.message);
   }
 };
 
 const mainFunction = async () => {
-  program
-    .version('0.0.1')
-    .option('-dr --dryRun', "Dry run the process")
-    .option('-pce --processCurrentEnvironment', "Whether to perform the process on current environment")
-    .parse(process.argv);
+  program.version('0.0.1').option('-dr --dryRun', "Dry run the process").parse(process.argv);
 
   const options = program.opts();
-  
-  const file = path.resolve(__dirname, '..', '..', 'configuration', "common", 'ec2', 'configuration.json');
-  let envs = await readAndParseFile(file);
-  envs['switching_to'] = process.env.SWITCHING_TO;
+  const file = path.resolve(__dirname, '..', '..', 'configuration', "common", 's3', 'configuration.json');
+  let config = await readAndParseFile(file);
 
   if (options.dryRun) {
     global.DRY_RUN = true;
@@ -76,16 +111,7 @@ const mainFunction = async () => {
     custom_logging(chalk.red("DRY RUN is disabled"));
   }
 
-  if (options.processCurrentEnvironment) {
-    global.PROCESS_CURRENT_ENVIRONMENT = true;
-    custom_logging(chalk.red("Current environment will be processed"));
-  } else {
-    custom_logging(chalk.yellow("Current environment will not be processed"));
-  }
-
-  custom_logging(`Switching to ${chalk.green(envs.switching_to)} environment`);
-
-  await processEC2Instances(envs);
+  await replicateS3EventNotifications(config);
   custom_logging(chalk.green("Process has been completed"));
 };
 
