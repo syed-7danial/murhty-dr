@@ -35,27 +35,31 @@ const updateArnRegion = (arn, sourceRegion, targetRegion) => {
 const copyS3EventNotifications = async (s3Settings) => {
   custom_logging(chalk.green("Starting S3 Event Notification Copy Process"));
 
-  const activeS3 = new AWS.S3({ region: s3Settings.active_region });
-  const failoverS3 = new AWS.S3({ region: s3Settings.failover_region });
-
   let sourceRegion, targetRegion, sourceBucket, targetBucket;
 
   if (s3Settings.switching_to === "ACTIVE") {
-    sourceRegion = s3Settings.active_region;
-    targetRegion = s3Settings.failover_region;
-    sourceBucket = s3Settings.triggers[0].active_bucket;
-    targetBucket = s3Settings.triggers[0].failover_bucket;
-  } else {
+    // Switching to ACTIVE means we're copying FROM failover TO active
     sourceRegion = s3Settings.failover_region;
     targetRegion = s3Settings.active_region;
     sourceBucket = s3Settings.triggers[0].failover_bucket;
     targetBucket = s3Settings.triggers[0].active_bucket;
+  } else {
+    // Switching to FAILOVER means we're copying FROM active TO failover
+    sourceRegion = s3Settings.active_region;
+    targetRegion = s3Settings.failover_region;
+    sourceBucket = s3Settings.triggers[0].active_bucket;
+    targetBucket = s3Settings.triggers[0].failover_bucket;
   }
+
+  // Create S3 clients with the correct regions
+  const sourceS3 = new AWS.S3({ region: sourceRegion });
+  const targetS3 = new AWS.S3({ region: targetRegion });
 
   try {
     custom_logging(chalk.green(`Fetching event notifications from ${sourceBucket} in ${sourceRegion}`));
     
-    const sourceNotificationConfig = await activeS3.getBucketNotificationConfiguration({ Bucket: sourceBucket }).promise();
+    const sourceNotificationConfig = await sourceS3.getBucketNotificationConfiguration({ Bucket: sourceBucket }).promise();
+    custom_logging(chalk.green(`Retrieved source notification config: ${JSON.stringify(sourceNotificationConfig, null, 2)}`));
 
     // Modify ARNs to match the target region
     const updatedNotificationConfig = JSON.parse(JSON.stringify(sourceNotificationConfig)); // Deep copy
@@ -76,10 +80,12 @@ const copyS3EventNotifications = async (s3Settings) => {
       });
     }
 
+    custom_logging(chalk.green(`Updated notification config: ${JSON.stringify(updatedNotificationConfig, null, 2)}`));
+
     // Apply the updated notification configuration to the target bucket
     custom_logging(chalk.green(`Updating event notifications on ${targetBucket} in ${targetRegion}`));
 
-    await failoverS3.putBucketNotificationConfiguration({
+    await targetS3.putBucketNotificationConfiguration({
       Bucket: targetBucket,
       NotificationConfiguration: updatedNotificationConfig
     }).promise();
@@ -87,6 +93,7 @@ const copyS3EventNotifications = async (s3Settings) => {
     custom_logging(chalk.green("Successfully replicated event notifications with region modification"));
   } catch (error) {
     custom_logging(chalk.red("Error copying S3 event notifications: ") + error.message);
+    custom_logging(chalk.red("Error stack: ") + error.stack);
   }
 };
 
@@ -120,4 +127,8 @@ const mainFunction = async () => {
 // Run the script
 mainFunction()
   .then(() => custom_logging(chalk.green("Exiting ...")))
-  .catch((error) => custom_logging(chalk.red("Error: ") + error.message));
+  .catch((error) => {
+    custom_logging(chalk.red("Error: ") + error.message);
+    custom_logging(chalk.red("Stack: ") + error.stack);
+    process.exit(1);
+  });
