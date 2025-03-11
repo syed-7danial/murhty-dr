@@ -136,7 +136,7 @@ const mainFunction = async () => {
 
   config['switching_to'] = process.env.SWITCHING_TO;
 
-  const processCurrentEnv = process.env.PROCESS_CURRENT_ENV === 'false';
+  const processCurrentEnv = process.env.PROCESS_CURRENT_ENV === 'true';
 
   if (options.dryRun) {
     global.DRY_RUN = true;
