@@ -380,6 +380,18 @@ const readAndParseFile = async (file) => {
   return JSON.parse(data);
 };
 
+const validateDestinationRegion = async (bucketName, destinationArn) => {
+  try {
+    const bucketLocation = await s3.getBucketLocation({ Bucket: bucketName }).promise();
+    const bucketRegion = bucketLocation.LocationConstraint || 'us-east-1';
+    const destinationRegion = destinationArn.split(':')[3];
+    return bucketRegion === destinationRegion;
+  } catch (error) {
+    custom_logging(chalk.red(`Error fetching bucket location for ${bucketName}: ${error.message}`));
+    return false;
+  }
+};
+
 const copyEventNotifications = async (triggers) => {
   custom_logging(chalk.green("Starting S3 Event Notification Copy"));
   
@@ -391,41 +403,53 @@ const copyEventNotifications = async (triggers) => {
       
       // Process Lambda triggers
       if (event_notifications.lambda_triggers) {
-        event_notifications.lambda_triggers.forEach(lambda => {
+        for (const lambda of event_notifications.lambda_triggers) {
           const lambdaConfigs = activeConfig.LambdaFunctionConfigurations.filter(config => config.LambdaFunctionArn.includes(lambda.active_lambda));
-          lambdaConfigs.forEach(lambdaConfig => {
-            newConfig.LambdaFunctionConfigurations.push({
-              ...lambdaConfig,
-              LambdaFunctionArn: lambdaConfig.LambdaFunctionArn.replace(lambda.active_lambda, lambda.failover_lambda)
-            });
-          });
-        });
+          for (const lambdaConfig of lambdaConfigs) {
+            if (await validateDestinationRegion(failover_bucket_name, lambdaConfig.LambdaFunctionArn.replace(lambda.active_lambda, lambda.failover_lambda))) {
+              newConfig.LambdaFunctionConfigurations.push({
+                ...lambdaConfig,
+                LambdaFunctionArn: lambdaConfig.LambdaFunctionArn.replace(lambda.active_lambda, lambda.failover_lambda)
+              });
+            } else {
+              custom_logging(chalk.red(`Skipping Lambda trigger due to region mismatch: ${lambdaConfig.LambdaFunctionArn}`));
+            }
+          }
+        }
       }
       
       // Process SNS triggers
       if (event_notifications.sns_triggers) {
-        event_notifications.sns_triggers.forEach(sns => {
+        for (const sns of event_notifications.sns_triggers) {
           const snsConfigs = activeConfig.TopicConfigurations.filter(config => config.TopicArn.includes(sns.active_sns));
-          snsConfigs.forEach(snsConfig => {
-            newConfig.TopicConfigurations.push({
-              ...snsConfig,
-              TopicArn: snsConfig.TopicArn.replace(sns.active_sns, sns.failover_sns)
-            });
-          });
-        });
+          for (const snsConfig of snsConfigs) {
+            if (await validateDestinationRegion(failover_bucket_name, snsConfig.TopicArn.replace(sns.active_sns, sns.failover_sns))) {
+              newConfig.TopicConfigurations.push({
+                ...snsConfig,
+                TopicArn: snsConfig.TopicArn.replace(sns.active_sns, sns.failover_sns)
+              });
+            } else {
+              custom_logging(chalk.red(`Skipping SNS trigger due to region mismatch: ${snsConfig.TopicArn}`));
+            }
+          }
+        }
       }
       
       // Process SQS triggers
       if (event_notifications.sqs_triggers) {
-        event_notifications.sqs_triggers.forEach(sqs => {
+        for (const sqs of event_notifications.sqs_triggers) {
           const sqsConfigs = activeConfig.QueueConfigurations.filter(config => config.QueueArn.includes(sqs.active_sqs));
-          sqsConfigs.forEach(sqsConfig => {
-            newConfig.QueueConfigurations.push({
-              ...sqsConfig,
-              QueueArn: sqsConfig.QueueArn.replace(sqs.active_sqs, sqs.failover_sqs)
-            });
-          });
-        });
+          for (const sqsConfig of sqsConfigs) {
+            if (await validateDestinationRegion(failover_bucket_name, sqsConfig.QueueArn.replace(sqs.active_sqs, sqs.failover_sqs))) {
+              newConfig.QueueConfigurations.push({
+                ...sqsConfig,
+                QueueArn: sqsConfig.QueueArn.replace(sqs.active_sqs, sqs.failover_sqs)
+              });
+            } else {
+              custom_logging(chalk.red(`Skipping SQS trigger due to region mismatch: ${sqsConfig.QueueArn}`));
+            }
+          }
+        }
       }
       
       await s3.putBucketNotificationConfiguration({
@@ -477,3 +501,4 @@ mainFunction()
   .catch((error) => {
     custom_logging(chalk.red("Error: ") + error.message);
   });
+
