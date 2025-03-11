@@ -32,9 +32,15 @@ pipeline {
 
                     def command = "node bankos-dr/services/s3/run-s3.js"
 
-
-                    // Set environment variables
                     env.SWITCHING_TO = params.SWITCHING_TO
+
+                    if (params.DRY_RUN) {
+                        command += ' -dr'
+                    }
+                    if (params.PROCESS_CURRENT_ENV) {
+                        command += ' -pce'
+                    }
+
                     sh command
                 }
             }
