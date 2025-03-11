@@ -27,6 +27,7 @@ const updateArnRegion = (arn, sourceRegion, targetRegion) => {
   if (arn.includes(`:${sourceRegion}:`)) {
     return arn.replace(`:${sourceRegion}:`, `:${targetRegion}:`);
   }
+  custom_logging(chalk.green(`arn: ${arn}`));
   return arn;
 };
 
