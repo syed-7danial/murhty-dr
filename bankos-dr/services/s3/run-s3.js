@@ -502,3 +502,30 @@ mainFunction()
     custom_logging(chalk.red("Error: ") + error.message);
   });
 
+const getEventNotificationsByTrigger = async (bucketName, triggerName) => {
+  try {
+    const config = await s3.getBucketNotificationConfiguration({ Bucket: bucketName }).promise();
+    
+    const filteredNotifications = {
+      LambdaFunctionConfigurations: config.LambdaFunctionConfigurations?.filter(config => 
+        config.LambdaFunctionArn.includes(triggerName)
+      ) || [],
+      QueueConfigurations: config.QueueConfigurations?.filter(config => 
+        config.QueueArn.includes(triggerName)
+      ) || [],
+      TopicConfigurations: config.TopicConfigurations?.filter(config => 
+        config.TopicArn.includes(triggerName)
+      ) || []
+    };
+
+    return filteredNotifications;
+  } catch (error) {
+    custom_logging(chalk.red(`Error fetching event notifications for ${bucketName}: ${error.message}`));
+    return null;
+  }
+};
+
+// Example usage
+getEventNotificationsByTrigger('danial-test-v1', 'danial-test-1')
+  .then(data => console.log(JSON.stringify(data, null, 2)))
+  .catch(err => console.error(err));
