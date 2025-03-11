@@ -29,26 +29,50 @@ const updateArnRegion = (arn, sourceRegion, targetRegion) => {
   return arn;
 };
 
-const copyS3EventNotifications = async (s3Settings) => {
+const deleteEventNotifications = async (s3Client, bucket) => {
+  try {
+    custom_logging(chalk.yellow(`Deleting all event notifications from ${bucket}`));
+    
+    const emptyNotificationConfig = {};
+    
+    await s3Client.putBucketNotificationConfiguration({
+      Bucket: bucket,
+      NotificationConfiguration: emptyNotificationConfig
+    }).promise();
+    
+    custom_logging(chalk.green(`Successfully deleted all event notifications from ${bucket}`));
+    return true;
+  } catch (error) {
+    custom_logging(chalk.red(`Error deleting event notifications from ${bucket}: ${error.message}`));
+    custom_logging(chalk.red(`Error stack: ${error.stack}`));
+    return false;
+  }
+};
+
+const copyS3EventNotifications = async (s3Settings, processCurrentEnv) => {
   custom_logging(chalk.green("Starting S3 Event Notification Copy Process"));
 
-  let sourceRegion, targetRegion, sourceBucket, targetBucket;
+  let sourceRegion, targetRegion, sourceBucket, targetBucket, currentRegion, currentBucket;
 
   if (s3Settings.switching_to === "ACTIVE") {
     sourceRegion = s3Settings.failover_region;
     targetRegion = s3Settings.active_region;
     sourceBucket = s3Settings.triggers[0].failover_bucket;
     targetBucket = s3Settings.triggers[0].active_bucket;
+    currentRegion = s3Settings.failover_region;
+    currentBucket = s3Settings.triggers[0].failover_bucket;
   } else {
     sourceRegion = s3Settings.active_region;
     targetRegion = s3Settings.failover_region;
     sourceBucket = s3Settings.triggers[0].active_bucket;
     targetBucket = s3Settings.triggers[0].failover_bucket;
+    currentRegion = s3Settings.active_region;
+    currentBucket = s3Settings.triggers[0].active_bucket;
   }
 
-  // Create S3 clients with the correct regions
   const sourceS3 = new AWS.S3({ region: sourceRegion });
   const targetS3 = new AWS.S3({ region: targetRegion });
+  const currentS3 = new AWS.S3({ region: currentRegion });
 
   try {
     custom_logging(chalk.green(`Fetching event notifications from ${sourceBucket} in ${sourceRegion}`));
@@ -56,7 +80,6 @@ const copyS3EventNotifications = async (s3Settings) => {
     const sourceNotificationConfig = await sourceS3.getBucketNotificationConfiguration({ Bucket: sourceBucket }).promise();
     custom_logging(chalk.green(`Retrieved source notification config: ${JSON.stringify(sourceNotificationConfig, null, 2)}`));
 
-    // Modify ARNs to match the target region
     const updatedNotificationConfig = JSON.parse(JSON.stringify(sourceNotificationConfig)); // Deep copy
 
     if (updatedNotificationConfig.TopicConfigurations) {
@@ -77,7 +100,6 @@ const copyS3EventNotifications = async (s3Settings) => {
 
     custom_logging(chalk.green(`Updated notification config: ${JSON.stringify(updatedNotificationConfig, null, 2)}`));
 
-    // Apply the updated notification configuration to the target bucket
     custom_logging(chalk.green(`Updating event notifications on ${targetBucket} in ${targetRegion}`));
 
     await targetS3.putBucketNotificationConfiguration({
@@ -86,17 +108,25 @@ const copyS3EventNotifications = async (s3Settings) => {
     }).promise();
 
     custom_logging(chalk.green("Successfully replicated event notifications with region modification"));
+
+    if (processCurrentEnv) {
+      custom_logging(chalk.yellow(`Process Current Environment flag is enabled. Deleting notifications in current environment.`));
+      await deleteEventNotifications(currentS3, currentBucket);
+    } else {
+      custom_logging(chalk.yellow(`Process Current Environment flag is disabled. Keeping current environment notifications.`));
+    }
   } catch (error) {
     custom_logging(chalk.red("Error copying S3 event notifications: ") + error.message);
     custom_logging(chalk.red("Error stack: ") + error.stack);
+    throw error; 
   }
 };
 
-// Main function
 const mainFunction = async () => {
   program
     .version('1.0.0')
     .option('-dr --dryRun', "Dry run the process")
+    .option('-pce --processCurrentEnvironment', "Whether to perform the process on current environment")
     .parse(process.argv);
 
   const options = program.opts();
@@ -106,6 +136,8 @@ const mainFunction = async () => {
 
   config['switching_to'] = process.env.SWITCHING_TO;
 
+  const processCurrentEnv = options.processCurrentEnvironment || process.env.PROCESS_CURRENT_ENV === 'false';
+
   if (options.dryRun) {
     global.DRY_RUN = true;
     custom_logging(chalk.yellow("DRY RUN is enabled"));
@@ -114,16 +146,16 @@ const mainFunction = async () => {
   }
 
   custom_logging(`Switching to ${chalk.green(config.switching_to)} environment`);
+  custom_logging(`Process Current Environment: ${processCurrentEnv ? chalk.green('ENABLED') : chalk.red('DISABLED')}`);
 
-  await copyS3EventNotifications(config);
+  await copyS3EventNotifications(config, processCurrentEnv);
   custom_logging(chalk.green("Process has been completed"));
 };
 
-// Run the script
 mainFunction()
   .then(() => custom_logging(chalk.green("Exiting ...")))
   .catch((error) => {
     custom_logging(chalk.red("Error: ") + error.message);
-    custom_logging(chalk.red("Stack: ") + error.stack);
+    custom_logging(chalk.red("Error stack: ") + error.stack);
     process.exit(1);
   });
