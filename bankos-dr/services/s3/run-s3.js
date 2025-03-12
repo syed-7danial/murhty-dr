@@ -56,7 +56,7 @@ const path = require('path');
 const { program } = require('commander');
 const chalk = require('chalk');
 const { custom_logging } = require('../../helper/helper.js');
-const { putBucketNotificationConfiguration,getBucketNotificationConfiguration,deleteBucketNotificationConfiguration } = require('../../helper/helper.js');
+const { putBucketNotificationConfiguration,getBucketNotificationConfiguration,deleteBucketNotificationConfiguration } = require('../../helper/aws/s3-event.js');
 
 const readFileAsync = promisify(fs.readFile);
 global.DRY_RUN = false;
