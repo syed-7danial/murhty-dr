@@ -5,6 +5,10 @@
     {
       "active_bucket": "danial-test-1",
       "failover_bucket": "danial-test-2"
+    },
+    {
+      "active_bucket": "danial-test-3",
+      "failover_bucket": "danial-test-4"
     }
   ]
 }
