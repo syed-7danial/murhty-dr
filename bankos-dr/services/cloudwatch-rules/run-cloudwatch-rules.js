@@ -287,6 +287,7 @@
 
 const { custom_logging } = require('../../helper/helper.js');
 const fs = require('fs');
+const AWS = require('aws-sdk');
 const { promisify } = require('util');
 const { program } = require('commander');
 const chalk = require('chalk');
