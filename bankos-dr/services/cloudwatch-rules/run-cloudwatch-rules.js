@@ -21,30 +21,55 @@ const readConfigFile = async () => {
   return JSON.parse(data);
 };
 
-const processEventBridgeRules = async (config, enable) => {
-  custom_logging(chalk.green("Starting process on EventBridge rules"));
-
+const processEventBridgeRules = async (config, switchingToActive, processCurrentEnv) => {
+  // Determine regions for the operation
+  const targetRegion = switchingToActive ? config.active_region : config.failover_region;
+  const currentRegion = switchingToActive ? config.failover_region : config.active_region;
+  
+  // Always enable rules in the target region
+  custom_logging(chalk.green(`Starting to enable rules in the target region: ${targetRegion}`));
   try {
-    const eventbridge = new AWS.EventBridge({ region: enable ? config.active_region : config.failover_region });
-    const buses = await eventbridge.listEventBuses().promise();
-    for (const bus of buses.EventBuses) {
-      const rules = await eventbridge.listRules({ EventBusName: bus.Name }).promise();
+    const targetEventBridge = new AWS.EventBridge({ region: targetRegion });
+    const targetBuses = await targetEventBridge.listEventBuses().promise();
+    
+    for (const bus of targetBuses.EventBuses) {
+      const rules = await targetEventBridge.listRules({ EventBusName: bus.Name }).promise();
       for (const rule of rules.Rules) {
         try {
-          if (enable) {
-            await eventbridge.enableRule({ Name: rule.Name, EventBusName: bus.Name }).promise();
-            custom_logging(chalk.green(`Enabled rule ${rule.Name} on ${bus.Name}`));
-          } else {
-            await eventbridge.disableRule({ Name: rule.Name, EventBusName: bus.Name }).promise();
-            custom_logging(chalk.red(`Disabled rule ${rule.Name} on ${bus.Name}`));
-          }
+          await targetEventBridge.enableRule({ Name: rule.Name, EventBusName: bus.Name }).promise();
+          custom_logging(chalk.green(`Enabled rule ${rule.Name} on ${bus.Name} in ${targetRegion}`));
         } catch (err) {
-          custom_logging(chalk.yellow(`Skipping rule ${rule.Name}: ${err.message}`));
+          custom_logging(chalk.yellow(`Skipping enabling rule ${rule.Name} in ${targetRegion}: ${err.message}`));
         }
       }
     }
   } catch (error) {
-    custom_logging(chalk.red('Error managing EventBridge rules: ') + error.message);
+    custom_logging(chalk.red(`Error enabling EventBridge rules in ${targetRegion}: `) + error.message);
+  }
+  
+  // Only disable rules in the current region if processCurrentEnv is true
+  if (processCurrentEnv) {
+    custom_logging(chalk.yellow(`Process current environment selected. Disabling rules in the current region: ${currentRegion}`));
+    try {
+      const currentEventBridge = new AWS.EventBridge({ region: currentRegion });
+      const currentBuses = await currentEventBridge.listEventBuses().promise();
+      
+      for (const bus of currentBuses.EventBuses) {
+        const rules = await currentEventBridge.listRules({ EventBusName: bus.Name }).promise();
+        for (const rule of rules.Rules) {
+          try {
+            await currentEventBridge.disableRule({ Name: rule.Name, EventBusName: bus.Name }).promise();
+            custom_logging(chalk.red(`Disabled rule ${rule.Name} on ${bus.Name} in ${currentRegion}`));
+          } catch (err) {
+            custom_logging(chalk.yellow(`Skipping disabling rule ${rule.Name} in ${currentRegion}: ${err.message}`));
+          }
+        }
+      }
+    } catch (error) {
+      custom_logging(chalk.red(`Error disabling EventBridge rules in ${currentRegion}: `) + error.message);
+    }
+  } else {
+    custom_logging(chalk.blue(`Not processing current environment. Keeping rules in ${currentRegion} as is.`));
   }
 };
 
@@ -70,9 +95,12 @@ const mainFunction = async () => {
   }
 
   const config = await readConfigFile();
-  const enable = process.env.SWITCHING_TO === "ACTIVE";
+  const switchingToActive = process.env.SWITCHING_TO === "ACTIVE";
   custom_logging(`Switching to ${chalk.green(process.env.SWITCHING_TO)} environment`);
-  await processEventBridgeRules(config, enable);
+  
+  // Pass the processCurrentEnvironment flag to the function
+  await processEventBridgeRules(config, switchingToActive, options.processCurrentEnvironment);
+  
   custom_logging(chalk.green("Process has been completed"));
 };
 
