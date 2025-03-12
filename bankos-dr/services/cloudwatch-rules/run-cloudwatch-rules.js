@@ -21,12 +21,10 @@ const readConfigFile = async () => {
   return JSON.parse(data);
 };
 
-const processEventBridgeRules = async (config, switchingToActive, processCurrentEnv) => {
-  // Determine regions for the operation
+const processEventBridgeRules = async (config, switchingToActive, processCurrentEnv, isDryRun) => {
   const targetRegion = switchingToActive ? config.active_region : config.failover_region;
   const currentRegion = switchingToActive ? config.failover_region : config.active_region;
   
-  // Always enable rules in the target region
   custom_logging(chalk.green(`Starting to enable rules in the target region: ${targetRegion}`));
   try {
     const targetEventBridge = new AWS.EventBridge({ region: targetRegion });
@@ -36,20 +34,23 @@ const processEventBridgeRules = async (config, switchingToActive, processCurrent
       const rules = await targetEventBridge.listRules({ EventBusName: bus.Name }).promise();
       for (const rule of rules.Rules) {
         try {
-          await targetEventBridge.enableRule({ Name: rule.Name, EventBusName: bus.Name }).promise();
-          custom_logging(chalk.green(`Enabled rule ${rule.Name} on ${bus.Name} in ${targetRegion}`));
+          if (isDryRun) {
+            custom_logging(chalk.cyan(`[DRY RUN] Would enable rule ${rule.Name} on ${bus.Name} in ${targetRegion}`));
+          } else {
+            await targetEventBridge.enableRule({ Name: rule.Name, EventBusName: bus.Name }).promise();
+            custom_logging(chalk.green(`Enabled rule ${rule.Name} on ${bus.Name} in ${targetRegion}`));
+          }
         } catch (err) {
           custom_logging(chalk.yellow(`Skipping enabling rule ${rule.Name} in ${targetRegion}: ${err.message}`));
         }
       }
     }
   } catch (error) {
-    custom_logging(chalk.red(`Error enabling EventBridge rules in ${targetRegion}: `) + error.message);
+    custom_logging(chalk.red(`Error ${isDryRun ? 'simulating' : 'enabling'} EventBridge rules in ${targetRegion}: `) + error.message);
   }
   
-  // Only disable rules in the current region if processCurrentEnv is true
   if (processCurrentEnv) {
-    custom_logging(chalk.yellow(`Process current environment selected. Disabling rules in the current region: ${currentRegion}`));
+    custom_logging(chalk.yellow(`Process current environment selected. ${isDryRun ? 'Would disable' : 'Disabling'} rules in the current region: ${currentRegion}`));
     try {
       const currentEventBridge = new AWS.EventBridge({ region: currentRegion });
       const currentBuses = await currentEventBridge.listEventBuses().promise();
@@ -58,15 +59,19 @@ const processEventBridgeRules = async (config, switchingToActive, processCurrent
         const rules = await currentEventBridge.listRules({ EventBusName: bus.Name }).promise();
         for (const rule of rules.Rules) {
           try {
-            await currentEventBridge.disableRule({ Name: rule.Name, EventBusName: bus.Name }).promise();
-            custom_logging(chalk.red(`Disabled rule ${rule.Name} on ${bus.Name} in ${currentRegion}`));
+            if (isDryRun) {
+              custom_logging(chalk.cyan(`[DRY RUN] Would disable rule ${rule.Name} on ${bus.Name} in ${currentRegion}`));
+            } else {
+              await currentEventBridge.disableRule({ Name: rule.Name, EventBusName: bus.Name }).promise();
+              custom_logging(chalk.red(`Disabled rule ${rule.Name} on ${bus.Name} in ${currentRegion}`));
+            }
           } catch (err) {
             custom_logging(chalk.yellow(`Skipping disabling rule ${rule.Name} in ${currentRegion}: ${err.message}`));
           }
         }
       }
     } catch (error) {
-      custom_logging(chalk.red(`Error disabling EventBridge rules in ${currentRegion}: `) + error.message);
+      custom_logging(chalk.red(`Error ${isDryRun ? 'simulating' : 'disabling'} EventBridge rules in ${currentRegion}: `) + error.message);
     }
   } else {
     custom_logging(chalk.blue(`Not processing current environment. Keeping rules in ${currentRegion} as is.`));
@@ -81,12 +86,12 @@ const mainFunction = async () => {
     .parse(process.argv);
 
   const options = program.opts();
+  const isDryRun = options.dryRun || false;
 
-  if (options.dryRun) {
-    global.DRY_RUN = true;
-    custom_logging(chalk.yellow("DRY RUN is enabled"));
+  if (isDryRun) {
+    custom_logging(chalk.yellow("DRY RUN is enabled - No changes will be made to EventBridge rules"));
   } else {
-    custom_logging(chalk.red("DRY RUN is disabled"));
+    custom_logging(chalk.red("DRY RUN is disabled - Changes will be applied to EventBridge rules"));
   }
 
   if (!process.env.SWITCHING_TO) {
@@ -96,12 +101,11 @@ const mainFunction = async () => {
 
   const config = await readConfigFile();
   const switchingToActive = process.env.SWITCHING_TO === "ACTIVE";
-  custom_logging(`Switching to ${chalk.green(process.env.SWITCHING_TO)} environment`);
+  custom_logging(`${isDryRun ? '[DRY RUN] Would switch' : 'Switching'} to ${chalk.green(process.env.SWITCHING_TO)} environment`);
   
-  // Pass the processCurrentEnvironment flag to the function
-  await processEventBridgeRules(config, switchingToActive, options.processCurrentEnvironment);
+  await processEventBridgeRules(config, switchingToActive, options.processCurrentEnvironment, isDryRun);
   
-  custom_logging(chalk.green("Process has been completed"));
+  custom_logging(chalk.green(`${isDryRun ? '[DRY RUN] Process simulation' : 'Process'} has been completed`));
 };
 
 mainFunction()
