@@ -51,7 +51,7 @@
 
 const AWS = require('aws-sdk');
 const chalk = require('chalk');
-const { custom_logging } = require('./helper.js');
+const { custom_logging } = require('../helper.js');
 
 const listEventBuses = async (region) => {
   const eventBridge = new AWS.EventBridge({ region });

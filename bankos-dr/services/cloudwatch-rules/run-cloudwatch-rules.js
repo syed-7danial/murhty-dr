@@ -291,7 +291,7 @@ const { promisify } = require('util');
 const { program } = require('commander');
 const chalk = require('chalk');
 const path = require('path');
-const { listEventBuses, listRules, enableRule, disableRule } = require('../../helper/helper.js');
+const { listEventBuses, listRules, enableRule, disableRule } = require('../../helper/aws/cloudwatch-rules.js');
 const readFileAsync = promisify(fs.readFile);
 
 AWS.config.update({
