@@ -16,7 +16,7 @@ AWS.config.update({
 });
 
 const readConfigFile = async () => {
-  const filePath = path.resolve(__dirname, '..', '..', 'configuration', "common", 'cloudwatch-rules', 'configuration.json');
+  const filePath = path.resolve(__dirname, '..', '..', 'configuration', 'common', "cloudwatch-rules", "configuration.json");
   const data = await readFileAsync(filePath, { encoding: 'utf-8' });
   return JSON.parse(data);
 };
