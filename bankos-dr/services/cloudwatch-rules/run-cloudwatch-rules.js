@@ -1,7 +1,11 @@
 const { custom_logging } = require('../../helper/helper.js');
+const fs = require('fs');
+const { promisify } = require('util');
 const { program } = require('commander');
 const chalk = require('chalk');
 const AWS = require('aws-sdk');
+const readFileAsync = promisify(fs.readFile);
+const path = require('path');
 
 AWS.config.update({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
@@ -11,11 +15,17 @@ AWS.config.update({
   retryDelayOptions: { base: 200 }
 });
 
-const processEventBridgeRules = async (switchingTo) => {
+const readConfigFile = async () => {
+  const filePath = path.resolve(__dirname, '..', '..', 'configuration', "common", 'cloudwatch-rules', 'configuration.json');
+  const data = await readFileAsync(filePath, { encoding: 'utf-8' });
+  return JSON.parse(data);
+};
+
+const processEventBridgeRules = async (config, switchingTo) => {
   custom_logging(chalk.green("Starting process on EventBridge rules"));
 
   try {
-    const regions = [process.env.ACTIVE_REGION, process.env.FAILOVER_REGION];
+    const regions = [config.active_region, config.failover_region];
     const eventbridges = regions.map(region => new AWS.EventBridge({ region }));
     
     const processBus = async (eventbridge, region, enable) => {
@@ -76,8 +86,9 @@ const mainFunction = async () => {
     process.exit(1);
   }
 
+  const config = await readConfigFile();
   custom_logging(`Switching to ${chalk.green(process.env.SWITCHING_TO)} environment`);
-  await processEventBridgeRules(process.env.SWITCHING_TO);
+  await processEventBridgeRules(config, process.env.SWITCHING_TO);
   custom_logging(chalk.green("Process has been completed"));
 };
 
