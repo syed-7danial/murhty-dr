@@ -1,6 +1,6 @@
 const AWS = require('aws-sdk');
 const chalk = require('chalk');
-const { custom_logging } = require('./helper.js');
+const { custom_logging } = require('../helper.js');
 
 const updateArnRegion = (arn, sourceRegion, targetRegion) => {
   if (arn.includes(`:${sourceRegion}:`)) {
