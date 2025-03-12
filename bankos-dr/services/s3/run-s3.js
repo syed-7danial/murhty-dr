@@ -139,7 +139,7 @@ const path = require('path');
 const { program } = require('commander');
 const chalk = require('chalk');
 const { custom_logging } = require('../../helper/helper.js');
-const { copyS3EventNotifications } = require('../../helper/aws/s3-events.js');
+const { copyS3EventNotifications } = require('../../helper/aws/s3-event.js');
 
 const readFileAsync = promisify(fs.readFile);
 global.DRY_RUN = false;
