@@ -11,10 +11,12 @@ pipeline {
 
     }
     stages {
-        stage('Install Node.js and Packages') {
+        stage('Install Node.js Packages') {
             steps {
-                sh 'npm install aws-sdk'
-                sh 'npm install'
+                sh '''
+                cd bankos-dr
+                npm install
+                '''
             }
         }
         stage('Load and Process Configuration') {
@@ -27,7 +29,7 @@ pipeline {
                     def activeFilteredArray = []
                     def failoverFilteredArray = []
 
-                    def command = "node bankos-dr/services/ec2/run-ec2-instance.js"
+                    def command = "node bankos-dr/services/ec2/main.js"
 
 
                     // Set environment variables

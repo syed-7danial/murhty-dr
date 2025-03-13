@@ -19,10 +19,12 @@ pipeline {
     }
 
     stages {
-        stage('Install Node.js and Packages') {
+        stage('Install Node.js Packages') {
             steps {
-                sh 'npm install aws-sdk'
-                sh 'npm install'
+                sh '''
+                cd bankos-dr
+                npm install
+                '''
             }
         }
 
@@ -35,7 +37,7 @@ pipeline {
                     env.SWITCHING_TO = params.SWITCHING_TO
 
                     // Split the keywords string into an array
-                    def command = 'node bankos-dr/services/lambda/run-lambda.js'
+                    def command = 'node bankos-dr/services/lambda/main.js'
 
                     env.CLIENT_NAME = params.CLIENT_NAME
 
@@ -46,10 +48,8 @@ pipeline {
                         command += ' -pce'
                     }
                     sh command
-
-            // }
+                }
             }
         }
     }
-}
 }

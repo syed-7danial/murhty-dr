@@ -26,9 +26,8 @@ pipeline {
                     env.AWS_ACCESS_KEY_ID = params.AWS_ACCESS_KEY_ID
                     env.AWS_SECRET_ACCESS_KEY = params.AWS_SECRET_ACCESS_KEY
                     env.AWS_SESSION_TOKEN = params.AWS_SESSION_TOKEN
-
-                    
-                    def command = "node bankos-dr/services/cloudwatch-rules/run-cloudwatch-rules.js"
+                 
+                    def command = "node bankos-dr/services/cloudwatch-rules/main.js"
 
                     env.SWITCHING_TO = params.SWITCHING_TO
 

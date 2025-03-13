@@ -1,11 +1,10 @@
 const { custom_logging , find_in_array_by_key_and_val }  = require ('../../helper/helper.js')
 const fs = require('fs');
-const fsPromise = require('fs').promises;
 const { program } = require('commander');
 const { promisify } = require('util');
 const chalk = require('chalk');
 const path = require('path');
-const {searchType, awsEnvironment}  = require ('../../helper/enum.js')
+const { awsEnvironment}  = require ('../../helper/enum.js')
 const readFileAsync = promisify(fs.readFile);
 async function readAndParseFile(file) {
     const data = await readFileAsync(file, { encoding: 'utf-8' });
@@ -23,8 +22,8 @@ maxRetries: 5, // Maximum number of retries
         base: 200 // Base delay in milliseconds
     }
 })
-const {  updateDistribution, createInvalidation } = require('../../helper/aws/cloudfront.js')
 
+const {  updateDistribution, createInvalidation } = require('../../helper/aws/cloudfront.js')
 const processCloudFront = async (cloudfrontSettings) => {
     custom_logging(chalk.green("Starting process on Cloudfront"))
     let cloudfront = new AWS.CloudFront();

@@ -15,10 +15,12 @@ pipeline {
 
     }
     stages {
-        stage('Install Node.js and Packages') {
+        stage('Install Node.js Packages') {
             steps {
-                sh 'npm install aws-sdk'
-                sh 'npm install'
+                sh '''
+                cd bankos-dr
+                npm install
+                '''
             }
         }
 
@@ -30,11 +32,10 @@ pipeline {
                 env.AWS_SECRET_ACCESS_KEY = params.AWS_SECRET_ACCESS_KEY
                 env.AWS_SESSION_TOKEN = params.AWS_SESSION_TOKEN
 
-                def command = "node bankos-dr/services/cloudfront/run-cloudfront.js"
+                def command = "node bankos-dr/services/cloudfront/main.js"
                 // Set environment variables
                 env.CLIENT_NAME = params.CLIENT_NAME
                 env.SWITCHING_TO = params.SWITCHING_TO
-                // Execute the Node.js script with the current distribution's configuration
 
                 if (params.DRY_RUN) 
                     command += " -dr"
@@ -43,7 +44,7 @@ pipeline {
                     command += " -pce"
 
                 sh command
-                } 
+                }
             }
         }
     }

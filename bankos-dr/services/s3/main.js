@@ -1,54 +1,3 @@
-// const AWS = require('aws-sdk');
-// const fs = require('fs');
-// const { promisify } = require('util');
-// const path = require('path');
-// const { program } = require('commander');
-// const chalk = require('chalk');
-// const { custom_logging } = require('../../helper/helper.js');
-// const { copyS3EventNotifications } = require('../../helper/aws/s3-event.js');
-
-// const readFileAsync = promisify(fs.readFile);
-// global.DRY_RUN = false;
-
-// AWS.config.update({
-//   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-//   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-//   sessionToken: process.env.AWS_SESSION_TOKEN,
-//   maxRetries: 5,
-//   retryDelayOptions: { base: 200 },
-// });
-
-// const readAndParseFile = async (file) => {
-//   const data = await readFileAsync(file, { encoding: 'utf-8' });
-//   return JSON.parse(data);
-// };
-
-// const mainFunction = async () => {
-//   program
-//     .version('1.0.0')
-//     .option('-dr --dryRun', "Dry run the process")
-//     .option('-pce --processCurrentEnvironment', "Process current environment")
-//     .parse(process.argv);
-
-//   const options = program.opts();
-//   global.DRY_RUN = options.dryRun || false;
-//   const configFile = path.resolve(__dirname, '..', '..', 'configuration', "common", 's3', 'configuration.json');
-//   let config = await readAndParseFile(configFile);
-//   config['switching_to'] = process.env.SWITCHING_TO;
-//   const processCurrentEnv = process.env.PROCESS_CURRENT_ENV === 'true';
-
-//   custom_logging(`Switching to ${chalk.green(config.switching_to)} environment`);
-//   await copyS3EventNotifications(config, processCurrentEnv);
-//   custom_logging(chalk.green("Process completed"));
-// };
-
-// mainFunction().catch(error => {
-//   custom_logging(chalk.red("Error: ") + error.message);
-//   process.exit(1);
-// });
-
-
-
 const AWS = require('aws-sdk');
 const fs = require('fs');
 const { promisify } = require('util');
@@ -56,7 +5,7 @@ const path = require('path');
 const { program } = require('commander');
 const chalk = require('chalk');
 const { custom_logging } = require('../../helper/helper.js');
-const { putBucketNotificationConfiguration,getBucketNotificationConfiguration,deleteBucketNotificationConfiguration } = require('../../helper/aws/s3-event.js');
+const { putBucketNotificationConfiguration,getBucketNotificationConfiguration,deleteBucketNotificationConfiguration } = require('../../helper/aws/s3.js');
 
 const readFileAsync = promisify(fs.readFile);
 global.DRY_RUN = false;

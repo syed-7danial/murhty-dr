@@ -4,7 +4,7 @@ const path = require('path');
 const { program } = require('commander');
 const { promisify } = require('util');
 const chalk = require('chalk');
-const {searchType, awsEnvironment}  = require ('../../helper/enum.js')
+const { awsEnvironment }  = require ('../../helper/enum.js')
 const readFileAsync = promisify(fs.readFile);
 async function readAndParseFile(file) {
     const data = await readFileAsync(file, { encoding: 'utf-8' });

@@ -3,17 +3,16 @@ const { program } = require('commander');
 const { promisify } = require('util');
 const chalk = require('chalk');
 const path = require('path');
-const { getBucketNotificationConfiguration, putBucketNotificationConfiguration } = require('../../helper/aws/bucket.js')
+const { getBucketNotificationConfiguration, putBucketNotificationConfiguration } = require('../../helper/aws/s3.js')
 const { custom_logging , find_in_array_by_key_and_val }  = require ('../../helper/helper.js')
-const { listLambdas, modifyLambdaConcurrency, addLambdaPermission, getEventSourceMapping, updateEventSourceMapping } = require('../../helper/aws/lambda.js')
-const {searchType, awsEnvironment}  = require ('../../helper/enum.js')
+const { addLambdaPermission, getEventSourceMapping, updateEventSourceMapping } = require('../../helper/aws/lambda.js')
+const { awsEnvironment}  = require ('../../helper/enum.js')
 const readFileAsync = promisify(fs.readFile);
 async function readAndParseFile(file) {
     const data = await readFileAsync(file, { encoding: 'utf-8' });
     const dataToJson = JSON.parse(data);
     return dataToJson
   }
-const {  modifyVpnConnectionRoute } = require('../../helper/aws/ec2.js')
 
 const AWS = require('aws-sdk');
 AWS.config.update({

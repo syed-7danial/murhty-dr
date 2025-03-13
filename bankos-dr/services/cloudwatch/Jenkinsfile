@@ -14,10 +14,12 @@ pipeline {
         booleanParam(name: 'PROCESS_CURRENT_ENV', defaultValue: false, description: 'Check this to process current environment')
     }
     stages {
-        stage('Install Node.js and Packages') {
+        stage('Install Node.js Packages') {
             steps {
-                sh 'npm install aws-sdk'
-                sh 'npm install'
+                sh '''
+                cd bankos-dr
+                npm install
+                '''
             }
         }
 
@@ -31,7 +33,7 @@ pipeline {
                     env.SWITCHING_TO = params.SWITCHING_TO
                     env.CLIENT_NAME = params.CLIENT_NAME
 
-                    def command = "node bankos-dr/services/cloudwatch/run-cloudwatch.js"
+                    def command = "node bankos-dr/services/cloudwatch/main.js"
                     if (params.DRY_RUN) 
                         command += " -dr"
 

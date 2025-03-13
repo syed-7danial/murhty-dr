@@ -30,7 +30,7 @@ pipeline {
                     def activeFilteredArray = []
                     def failoverFilteredArray = []
 
-                    def command = "node bankos-dr/services/s3/run-s3.js"
+                    def command = "node bankos-dr/services/s3/main.js"
 
                     env.SWITCHING_TO = params.SWITCHING_TO
 
