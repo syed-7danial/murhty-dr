@@ -2,9 +2,9 @@
     "active_region": "us-east-1",
     "failover_region": "us-east-2",
     "active_instance_id":[
-        "i-0cb2d5da886375f8e"  
+       "i-07f7248ea2c071f5d"
     ],
     "failover_instance_id":[
-        "i-08bd26f516458b9e1"
+        "i-07ed659b68155d4e6"
     ]
 }
