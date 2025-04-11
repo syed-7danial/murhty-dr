@@ -1,21 +1,21 @@
 {
     "active_region": "us-east-1",
-    "failover_region": "us-east-2",
+    "failover_region": "us-west-1",
     "rds":[
         {
             "active_configurations": {
-                "identifier": "hqf-sls-1",
-                "kms_key_id": "40a25d87-c7cd-4162-b7b8-f4fef85b53a5",
-                "subnet_group_name":"dani-db-subnet-group",
-                "security_group_ids":["sg-093626bfdd501cd04"],
-                "proxy_name": "hqf-sls-proxy-1"
+                "identifier": "prod-test",
+                "kms_key_id": "f9b12014-d9e4-4ce4-92f4-5759ae911fc4",
+                "subnet_group_name":"default-vpc-0cb59b4e816ae855e",
+                "security_group_ids":["sg-04dd7b70627de9bb3"],
+                "proxy_name": "prod-test-proxy"
             },
             "failover_configurations": {
-                "identifier": "dani-db-1",
-                "kms_key_id": "ff9aceb7-a089-4dcd-8aee-9e50e62e7c89",
-                "subnet_group_name":"dani-db-subnet-group",
-                "security_group_ids":["sg-0fa2023b184f3dd00"],
-                "proxy_name": "dani-db-proxy-1"
+                "identifier": "prod-test",
+                "kms_key_id": "e184478d-7a82-46c6-8585-bdf2ac90e0c3",
+                "subnet_group_name":"default-vpc-0799a47f1563abf96",
+                "security_group_ids":["sg-0a9cfa5a8950954e7"],
+                "proxy_name": "prod-test-proxy"
             }
         }
     ]

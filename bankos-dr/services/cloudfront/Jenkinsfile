@@ -1,11 +1,19 @@
 pipeline {
-    agent any
-    environment {
-        CONFIG_FILE = './cloudfront/configuration.json'
+    agent {
+        docker {
+            label 'bankos'
+            image 'build-agent:1.0.2-jdk17'
+            registryUrl 'https://docker.finzly.net'
+            registryCredentialsId 'nexus-creds'
+            args '-v /var/run/docker.sock:/var/run/docker.sock'
+        }
     }
+   environment {
+        CONFIG_FILE = './cloudfront/configuration.json'
+   }
     parameters {
         choice(name: 'SWITCHING_TO', choices: ['ACTIVE', 'FAILOVER'], description: 'Select the environment')
-        choice(name: 'CLIENT_NAME', choices: ['FED', 'RTP', 'FED-ACH'], description: 'Select the CLIENT_NAME')
+        choice(name: 'CLIENT_NAME', choices: ['FED', 'RTP', 'FED-ACH','sample-client'], description: 'Select the CLIENT_NAME')
         password(name: 'AWS_ACCESS_KEY_ID', defaultValue: '', description: 'AWS_ACCESS_KEY_ID')
         password(name: 'AWS_SECRET_ACCESS_KEY', defaultValue: '', description: 'AWS_SECRET_ACCESS_KEY')
         password(name: 'AWS_SESSION_TOKEN', defaultValue: '', description: 'AWS_SESSION_TOKEN')
@@ -46,6 +54,11 @@ pipeline {
                 sh command
                 }
             }
+        }
+    }
+    post {
+        always {
+            cleanWs()  // Clean up workspace after the pipeline execution
         }
     }
 }

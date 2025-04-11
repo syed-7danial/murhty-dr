@@ -16,8 +16,10 @@ pipeline {
     stages {
         stage('Install Node.js and Packages') {
             steps {
-                sh 'npm install aws-sdk'
-                sh 'npm install'
+                sh '''
+                cd bankos-dr
+                npm install
+                '''
             }
         }
         stage('Load and Process Configuration') {
