@@ -528,6 +528,7 @@ const processRds = async (environmentConfig) => {
                 // Rename the Active RDS and append it with `old` (unless PROCESS_CURRENT_ENV is true)
                 if (!global.PROCESS_CURRENT_ENVIRONMENT) {
                     await modifyDBInstanceIdentifier(activeRdsClient, rdsConfig.active_configurations);
+                    await waitForDbInstanceAvailable(activeRdsClient, rdsConfig.active_configurations.identifier)
                 
                     // Create the read replica in Failover of Active RDS
                     // First get details of active RDS
