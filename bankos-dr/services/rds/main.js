@@ -437,6 +437,54 @@ const waitForReplicaPromotionComplete = async (rdsClient, dbInstanceIdentifier) 
     await new Promise(resolve => setTimeout(resolve, 15000));  // 15 seconds additional wait
 };
 
+const waitForReplicaAvailable = async (rdsClient, dbInstanceIdentifier) => {
+    let replicaNotAvailable = true;
+    
+    custom_logging(chalk.yellow(`Waiting for replica ${dbInstanceIdentifier} to become available...`));
+
+    while (replicaNotAvailable) {
+        try {
+            const response = await rdsClient.describeDBInstances({
+                DBInstanceIdentifier: dbInstanceIdentifier
+            }).promise();
+
+            const dbInstance = response.DBInstances[0];
+
+            // Check both instance status and replication status
+            if (dbInstance && dbInstance.DBInstanceStatus === "available") {
+                // Check for replication-specific properties
+                if (dbInstance.ReadReplicaSourceDBInstanceIdentifier) {
+                    // Check replication status if available
+                    const replicationHealthy = dbInstance.StatusInfos && 
+                        dbInstance.StatusInfos.every(info => 
+                            info.Status === "replicating" || info.Status === "normal");
+                    
+                    if (replicationHealthy !== false) { // If undefined or true
+                        custom_logging(chalk.green(`Replica ${dbInstanceIdentifier} is now available and replication is healthy.`));
+                        replicaNotAvailable = false;  // Exit loop
+                    } else {
+                        custom_logging(chalk.yellow(`Replica ${dbInstanceIdentifier} is available but replication has issues. Status: ${JSON.stringify(dbInstance.StatusInfos)}`));
+                        await new Promise(resolve => setTimeout(resolve, global.SLEEP_TIME ? global.SLEEP_TIME * 60 : 30000));
+                    }
+                } else {
+                    // If it doesn't have a source identifier anymore, it might have been promoted
+                    custom_logging(chalk.green(`${dbInstanceIdentifier} is available but not a replica (might have been promoted).`));
+                    replicaNotAvailable = false;  // Exit loop
+                }
+            } else {
+                custom_logging(chalk.yellow(`Waiting for replica ${dbInstanceIdentifier} to become available. Current status: ${dbInstance.DBInstanceStatus}`));
+                await new Promise(resolve => setTimeout(resolve, global.SLEEP_TIME ? global.SLEEP_TIME * 60 : 30000));
+            }
+        } catch (error) {
+            custom_logging(chalk.red(`Error checking status of replica ${dbInstanceIdentifier}: ${error.message}`));
+            throw error;  // Stop execution if an unexpected error occurs
+        }
+    }
+    
+    // Additional buffer time to ensure replica is stable after reporting available
+    custom_logging(chalk.yellow(`Giving additional time for replica ${dbInstanceIdentifier} processes to stabilize...`));
+    await new Promise(resolve => setTimeout(resolve, 10000));  // 10 seconds additional wait
+};
 
 const waitForDbRenameComplete = async (rdsClient, oldName, newName) => {
     let renamingInProgress = true;
@@ -661,28 +709,8 @@ const processRds = async (environmentConfig) => {
                     await createReadReplica(activeRdsClient, createFailoverReadReplicaParams);
                     
                     // Wait for the read replica to be available
-                    await waitForDbInstanceAvailable(activeRdsClient, rdsConfig.failover_configurations.identifier);
+                    await waitForReplicaAvailable(activeRdsClient, rdsConfig.failover_configurations.identifier);
                     
-                    // Update proxy for failover region
-                    // let describeFailoverProxyParams = {
-                    //     DBProxyName: rdsConfig.failover_configurations.proxy_name,
-                    //     DBInstanceIdentifier: rdsConfig.failover_configurations.identifier
-                    // };
-
-                    // custom_logging(`Getting ${rdsConfig.failover_configurations.proxy_name} details in ${environmentConfig.failover_region}`);
-                    // let failoverProxyResult = await describeDBProxies(failoverRdsClient, describeFailoverProxyParams);
-
-                    // let updateFailoverProxyParams = {
-                    //     DBProxyName: rdsConfig.failover_configurations.proxy_name,
-                    //     Auth: failoverProxyResult.Auth,
-                    //     IdleClientTimeout: failoverProxyResult.IdleClientTimeout,
-                    //     DebugLogging: failoverProxyResult.DebugLogging,
-                    //     RequireTLS: failoverProxyResult.RequireTLS,
-                    //     RoleArn: failoverProxyResult.RoleArn
-                    // };
-
-                    // custom_logging(`Updating ${rdsConfig.failover_configurations.proxy_name} details in ${environmentConfig.failover_region}`);
-                    // await updateRDSProxy(failoverRdsClient, updateFailoverProxyParams);
                 }
                 
                 custom_logging(chalk.yellow(`${rdsConfig.failover_configurations.identifier} is now the primary in ${environmentConfig.failover_region}`));
