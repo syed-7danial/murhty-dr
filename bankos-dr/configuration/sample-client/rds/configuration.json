@@ -11,10 +11,10 @@
                 "proxy_name": "test-1"
             },
             "failover_configurations": {
-                "identifier": "danial-database-us-east-2",
+                "identifier": "danial-us-east-1-read-replica",
                 "kms_key_id": "ff9aceb7-a089-4dcd-8aee-9e50e62e7c89",
                 "subnet_group_name":"default-vpc-06dcd570f8eedb059",
-                "security_group_ids":["sg-02f458324ea49bf94"],
+                "security_group_ids":["sg-06be3bdeff4405d8d"],
                 "proxy_name": "test-2"
             }
         }
