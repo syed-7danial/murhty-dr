@@ -394,6 +394,50 @@ const waitForDbInstanceDeletion = async (rdsClient, deleteDbInstanceparams) => {
     }
 };
 
+const waitForReplicaPromotionComplete = async (rdsClient, dbInstanceIdentifier) => {
+    let promotionNotComplete = true;
+    custom_logging(chalk.yellow(`Waiting for ${dbInstanceIdentifier} promotion to complete...`));
+    
+    while (promotionNotComplete) {
+        try {
+            const response = await rdsClient.describeDBInstances({
+                DBInstanceIdentifier: dbInstanceIdentifier
+            }).promise();
+            
+            const dbInstance = response.DBInstances[0];
+            
+            // Check both instance status and replication status
+            if (dbInstance && dbInstance.DBInstanceStatus === "available" && 
+                (!dbInstance.ReadReplicaSourceDBInstanceIdentifier || dbInstance.ReadReplicaSourceDBInstanceIdentifier === '')) {
+                
+                // Additional check for backup status to ensure it's fully promoted
+                if (dbInstance.BackupRetentionPeriod >= 0) {  // Could be 0 after promotion
+                    custom_logging(chalk.green(`${dbInstanceIdentifier} promotion is now complete. Current status: ${dbInstance.DBInstanceStatus}`));
+                    promotionNotComplete = false;  // Exit loop
+                } else {
+                    custom_logging(chalk.yellow(`${dbInstanceIdentifier} promotion is still processing backup configurations.`));
+                    await new Promise(resolve => setTimeout(resolve, global.SLEEP_TIME ? global.SLEEP_TIME * 60 : 30000));
+                }
+            } else {
+                custom_logging(chalk.yellow(`Waiting for ${dbInstanceIdentifier} promotion to complete. Current status: ${dbInstance.DBInstanceStatus}`));
+                custom_logging(chalk.yellow(`Read Replica Source: ${dbInstance.ReadReplicaSourceDBInstanceIdentifier || 'None (good)'}`));
+                await new Promise(resolve => setTimeout(resolve, global.SLEEP_TIME ? global.SLEEP_TIME * 60 : 30000));
+            }
+        } catch (error) {
+            custom_logging(chalk.red(`Error checking promotion status of ${dbInstanceIdentifier}: ${error.message}`));
+            throw error;
+        }
+    }
+
+    // // After promotion is complete, ensure backups are enabled
+    // await enableBackupsOnDBInstance(rdsClient, dbInstanceIdentifier);
+    
+    // Allow additional time for all promotion-related processes to settle
+    custom_logging(chalk.yellow(`Giving additional time for promotion processes to complete fully...`));
+    await new Promise(resolve => setTimeout(resolve, 15000));  // 15 seconds additional wait
+};
+
+
 const waitForDbRenameComplete = async (rdsClient, oldName, newName) => {
     let renamingInProgress = true;
     custom_logging(chalk.yellow(`Waiting for DB rename from ${oldName} to ${newName} to complete...`));
@@ -505,7 +549,7 @@ const processRds = async (environmentConfig) => {
                 await promoteReadReplica(failoverRdsClient, promoteFailoverParams);
                 
                 // Wait for the failover instance to be available after promotion
-                await waitForDbInstanceAvailable(failoverRdsClient, rdsConfig.failover_configurations.identifier);
+                await waitForReplicaPromotionComplete(failoverRdsClient, rdsConfig.failover_configurations.identifier);
                 
                 // Getting Failover DB details (after promotion)
                 dbInstanceDetails = await describeDBInstances(failoverRdsClient, rdsConfig.failover_configurations.identifier);
@@ -565,7 +609,7 @@ const processRds = async (environmentConfig) => {
                 await promoteReadReplica(activeRdsClient, promoteActiveParams);
                 
                 // Wait for the active instance to be available after promotion
-                await waitForDbInstanceAvailable(activeRdsClient, rdsConfig.active_configurations.identifier);
+                await waitForReplicaPromotionComplete(activeRdsClient, rdsConfig.active_configurations.identifier);
                 
                 // Update proxy for active region
                 let describeActiveProxyParams = {
