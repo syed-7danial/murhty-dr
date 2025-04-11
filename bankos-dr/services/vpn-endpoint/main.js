@@ -6,6 +6,7 @@
 // const chalk = require('chalk');
 // const { awsEnvironment }  = require ('../../helper/enum.js')
 // const readFileAsync = promisify(fs.readFile);
+
 // async function readAndParseFile(file) {
 //     const data = await readFileAsync(file, { encoding: 'utf-8' });
 //     const dataToJson = JSON.parse(data);
@@ -99,8 +100,6 @@
 //     .catch((error) => {
 //         custom_logging(chalk.red("Error: ") + error.message);
 //     });
-
-
 const { custom_logging }  = require ('../../helper/helper.js')
 const fs = require('fs');
 const path = require('path');
@@ -113,7 +112,7 @@ async function readAndParseFile(file) {
     const data = await readFileAsync(file, { encoding: 'utf-8' });
     const dataToJson = JSON.parse(data);
     return dataToJson
-}
+  }
 const {  modifyVpnConnectionRoute } = require('../../helper/aws/ec2.js')
 
 const AWS = require('aws-sdk');
@@ -121,12 +120,11 @@ AWS.config.update({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
   sessionToken: process.env.AWS_SESSION_TOKEN,
-  maxRetries: 5,
+  maxRetries: 5, // Maximum number of retries
   retryDelayOptions: { 
-      base: 200
+    base: 200 // Base delay in milliseconds
   }
 })
-
 const processVpnEndpoint = async (environmentConfig) => {
     custom_logging(chalk.green("Starting process on Endpoints"))
     for (let vpn_endpoint of environmentConfig.vpn_endpoints) {
@@ -168,30 +166,15 @@ const mainFunction = async () => {
     .version('0.0.1')
     .option('-dr --dryRun', "Dry run the process")
     .option('-pce --processCurrentEnvironment', "Whether to perform the process on current environment")
-    .option('-all --allClients', "Run for all clients")
-    .option('-pcf --processCommonFolder', "Run the common folder config too")
 
     .parse(process.argv);
     
     const options = program.opts();
-    const baseConfigPath = path.resolve(__dirname, '..', '..', 'configuration');
-    let clientsToProcess = [];
-
-    if (options.allClients) {
-        const allDirs = fs.readdirSync(baseConfigPath, { withFileTypes: true });
-        allDirs.forEach(dirent => {
-            if (dirent.isDirectory() && dirent.name !== 'common') {
-                clientsToProcess.push(dirent.name);
-            }
-        });
-    } else {
-        clientsToProcess.push(process.env.CLIENT_NAME);
-    }
-
-    if (options.processCommonFolder) {
-        clientsToProcess.push('common');
-    }
-
+    const file = path.resolve(__dirname, '..', '..', 'configuration', process.env.CLIENT_NAME, 'vpn_endpoint', 'configuration.json');
+    let envs = await readAndParseFile(file)
+    envs['switching_to'] = process.env.SWITCHING_TO
+    envs['CLIENT_NAME'] = process.env.CLIENT_NAME
+    console.log(envs)
     if (options.dryRun) {
         global.DRY_RUN = true;
         custom_logging(chalk.yellow("DRY RUN is enabled"))
@@ -206,23 +189,9 @@ const mainFunction = async () => {
     else
         custom_logging(chalk.yellow("Current environment will not be processed"))
 
-    for (const client of clientsToProcess) {
-        try {
-            const file = path.resolve(baseConfigPath, client, 'vpn_endpoint', 'configuration.json');
-            if (!fs.existsSync(file)) {
-                custom_logging(chalk.yellow(`Configuration file not found for ${client}, skipping.`));
-                continue;
-            }
-            let envs = await readAndParseFile(file)
-            envs['switching_to'] = process.env.SWITCHING_TO
-            envs['CLIENT_NAME'] = client
-            custom_logging(`Switing to ${chalk.green(envs.switching_to)} environment for client ${chalk.cyan(client)}`)
-            await processVpnEndpoint(envs)
-            custom_logging(chalk.green(`Process completed for ${client}`));
-        } catch (error) {
-            custom_logging(chalk.red(`Error while processing ${client}: `) + error.message);
-        }
-    }
+    custom_logging(`Switing to ${chalk.green(envs.switching_to)} environment`)
+    await processVpnEndpoint(envs)
+    custom_logging(chalk.green("Process has been completed"));
 };
 
 mainFunction()
