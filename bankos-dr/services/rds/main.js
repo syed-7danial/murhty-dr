@@ -482,7 +482,7 @@ const processRds = async (environmentConfig) => {
                     SkipFinalSnapshot: false
                 };
 
-                // If it exists and force_delete is false → Fail the operation to avoid accidental overrides
+                // If it exists and force_delete is false → Rename the Active RDS and append it with 'old'
                 // If it exists and force_delete is true → Delete the existing Active RDS
                 if (dbInstanceDetails && dbInstanceDetails.DBInstances.length > 0) {
                     if (rdsConfig.force_delete) {
@@ -490,8 +490,11 @@ const processRds = async (environmentConfig) => {
                         await deleteDbInstance(activeRdsClient, deleteDbInstanceparams);
                         await waitForDbInstanceDeletion(activeRdsClient, deleteDbInstanceparams.DBInstanceIdentifier);
                     }
-                    else
-                        throw Error(`DB ${rdsConfig.active_configurations.identifier} already exists, Please delete it first`)
+                    else {
+                        custom_logging(chalk.yellow(`Renaming existing ${rdsConfig.active_configurations.identifier} in ${environmentConfig.active_region} to append '-old'`));
+                        let renamedActiveInstanceId = await modifyDBInstanceIdentifier(activeRdsClient, rdsConfig.active_configurations);
+                        custom_logging(chalk.green(`Successfully renamed to ${renamedActiveInstanceId}`));
+                    }
                 }
                 
                 // First, promote the failover DB to primary
