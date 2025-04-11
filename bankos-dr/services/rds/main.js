@@ -655,7 +655,7 @@ const processRds = async (environmentConfig) => {
                     };
                     
                     if (rdsConfig.failover_configurations.hasOwnProperty("kms_key_id") && rdsConfig.failover_configurations.kms_key_id != "")
-                        createFailoverReadReplicaParams['KmsKeyId'] = rdsConfig.failover_configurations.kms_key_id;
+                        createFailoverReadReplicaParams['KmsKeyId'] = rdsConfig.active_configurations.kms_key_id;
                     
                     custom_logging(`Creating read-replica of ${rdsConfig.failover_configurations.identifier} in ${environmentConfig.active_region}`);
                     await createReadReplica(activeRdsClient, createFailoverReadReplicaParams);
