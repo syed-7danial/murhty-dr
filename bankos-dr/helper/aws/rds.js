@@ -34,8 +34,8 @@ const createReadReplica = async (rdsClient, createReadReplicaParams) => {
 
     let response = await rdsClient.createDBInstanceReadReplica(createReadReplicaParams).promise()  
     while(response.DBInstance.DBInstanceStatus != "available") {
-        custom_logging(chalk.yellow(`waiting for ${createReadReplicaParams.DBInstanceIdentifier} db instance to be in available state`));
-        await new Promise(resolve => setTimeout(resolve, global.SLEEP_TIME * 60));
+        custom_logging(chalk.yellow(`Waiting for ${createReadReplicaParams.DBInstanceIdentifier} db instance to be in available state`));
+        await new Promise(resolve => setTimeout(resolve, global.SLEEP_TIME * 110000));
         response = await rdsClient.describeDBInstances({DBInstanceIdentifier: createReadReplicaParams.DBInstanceIdentifier}).promise()
         response = {
             "DBInstance" : response.DBInstances[0]
