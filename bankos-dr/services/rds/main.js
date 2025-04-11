@@ -317,7 +317,6 @@
 //     }
 // }
 
-
 const { custom_logging, find_in_array_by_key_and_val } = require('../../helper/helper.js')
 const fs = require('fs');
 const { program } = require('commander');
@@ -395,18 +394,68 @@ const waitForDbInstanceDeletion = async (rdsClient, deleteDbInstanceparams) => {
     }
 };
 
+const waitForDbRenameComplete = async (rdsClient, oldName, newName) => {
+    let renamingInProgress = true;
+    custom_logging(chalk.yellow(`Waiting for DB rename from ${oldName} to ${newName} to complete...`));
+    
+    while (renamingInProgress) {
+        try {
+            // Try to describe the instance with its new name
+            const response = await rdsClient.describeDBInstances({
+                DBInstanceIdentifier: newName
+            }).promise();
+            
+            const dbInstance = response.DBInstances[0];
+            
+            if (dbInstance && dbInstance.DBInstanceStatus === "available") {
+                custom_logging(chalk.green(`DB instance renamed to ${newName} and is now available.`));
+                renamingInProgress = false;  // Exit loop
+            } else {
+                custom_logging(chalk.yellow(`Waiting for renamed DB ${newName} to become available. Current status: ${dbInstance.DBInstanceStatus}`));
+                await new Promise(resolve => setTimeout(resolve, global.SLEEP_TIME ? global.SLEEP_TIME * 60 : 30000));  // Wait before retrying
+            }
+        } catch (error) {
+            // If we can't find the renamed instance yet, check if the old one still exists
+            try {
+                await rdsClient.describeDBInstances({
+                    DBInstanceIdentifier: oldName
+                }).promise();
+                
+                custom_logging(chalk.yellow(`Original DB ${oldName} still exists. Waiting for rename operation to complete...`));
+                await new Promise(resolve => setTimeout(resolve, global.SLEEP_TIME ? global.SLEEP_TIME * 60 : 30000));  // Wait before retrying
+            } catch (innerError) {
+                if (innerError.code === 'DBInstanceNotFound') {
+                    // Old instance not found, but new one not yet available - this is an intermediate state
+                    custom_logging(chalk.yellow(`Original DB ${oldName} no longer exists. Waiting for ${newName} to become available...`));
+                    await new Promise(resolve => setTimeout(resolve, global.SLEEP_TIME ? global.SLEEP_TIME * 60 : 30000));  // Wait before retrying
+                } else {
+                    custom_logging(chalk.red(`Error checking DB instances: ${innerError.message}`));
+                    throw innerError;
+                }
+            }
+        }
+    }
+};
+
 // Modified to add 'old' suffix to the DB instance name
 const modifyDBInstanceIdentifier = async (rds, dbInstanceIdentifier) => {
-    const newDbInstanceIdentifier = `${dbInstanceIdentifier.identifier}-old`;
+    const originalDbName = dbInstanceIdentifier.identifier;
+    const newDbInstanceIdentifier = `${originalDbName}-old`;
 
     try {
         // Step 1: Modify a DbInstance name
         await rds.modifyDBInstance({
-            DBInstanceIdentifier: dbInstanceIdentifier.identifier,
+            DBInstanceIdentifier: originalDbName,
             NewDBInstanceIdentifier: newDbInstanceIdentifier,
             ApplyImmediately: true
         }).promise();
-        console.log(`Original DB instance ${dbInstanceIdentifier.identifier} renamed to ${newDbInstanceIdentifier}.`);
+        
+        console.log(`Renaming DB instance ${originalDbName} to ${newDbInstanceIdentifier}...`);
+        
+        // Wait for the rename operation to complete
+        await waitForDbRenameComplete(rds, originalDbName, newDbInstanceIdentifier);
+        
+        return newDbInstanceIdentifier;
     } catch (err) {
         console.error('Error during the DB instance modification process:', err);
         throw err;
@@ -444,11 +493,22 @@ const processRds = async (environmentConfig) => {
                     else
                         throw Error(`DB ${rdsConfig.active_configurations.identifier} already exists, Please delete it first`)
                 }
-                // Getting Failover DB details
-                dbInstanceDetails = await describeDBInstances(failoverRdsClient, rdsConfig.failover_configurations.identifier)
+                
+                // First, promote the failover DB to primary
+                custom_logging(`Promoting ${environmentConfig.failover_region}'s ${rdsConfig.failover_configurations.identifier} to primary`);
+                let promoteFailoverParams = {
+                    DBInstanceIdentifier: rdsConfig.failover_configurations.identifier
+                };
+                await promoteReadReplica(failoverRdsClient, promoteFailoverParams);
+                
+                // Wait for the failover instance to be available after promotion
+                await waitForDbInstanceAvailable(failoverRdsClient, rdsConfig.failover_configurations.identifier);
+                
+                // Getting Failover DB details (after promotion)
+                dbInstanceDetails = await describeDBInstances(failoverRdsClient, rdsConfig.failover_configurations.identifier);
                 const { Account: accountId } = await sts.getCallerIdentity({}).promise();
 
-                // Create read replica in Active of Failover RDS (unless PROCESS_CURRENT_ENV is true)
+                // Create read replica in Active region of the promoted Failover instance (unless PROCESS_CURRENT_ENV is true)
                 if (!global.PROCESS_CURRENT_ENVIRONMENT) {
                     let createReadReplicaParams = {
                         DBInstanceIdentifier: rdsConfig.active_configurations.identifier,
@@ -464,16 +524,19 @@ const processRds = async (environmentConfig) => {
 
                     custom_logging(`Creating read-replica of ${rdsConfig.failover_configurations.identifier} in ${environmentConfig.active_region}`);
                     await createReadReplica(activeRdsClient, createReadReplicaParams);
+                    
+                    // Wait for the read replica to be available
+                    await waitForDbInstanceAvailable(activeRdsClient, rdsConfig.active_configurations.identifier);
                 }
 
+                // Update proxy configuration
                 custom_logging(`Getting ${rdsConfig.active_configurations.proxy_name} details in ${environmentConfig.active_region}`);
-
                 let describeProxyParams = {
                     DBProxyName: rdsConfig.active_configurations.proxy_name,
                     DBInstanceIdentifier: rdsConfig.active_configurations.identifier
-                }
+                };
 
-                result = await describeDBProxies(activeRdsClient, describeProxyParams);
+                let result = await describeDBProxies(activeRdsClient, describeProxyParams);
 
                 let updateRDSProxyParams = {
                     DBProxyName: rdsConfig.active_configurations.proxy_name,
@@ -482,73 +545,98 @@ const processRds = async (environmentConfig) => {
                     DebugLogging: result.DebugLogging,
                     RequireTLS: result.RequireTLS,
                     RoleArn: result.RoleArn
-                }
+                };
 
                 custom_logging(`Updating ${rdsConfig.active_configurations.proxy_name} details in ${environmentConfig.active_region}`);
                 await updateRDSProxy(activeRdsClient, updateRDSProxyParams);
 
-                let promoteReadReplicationParams = {
+                // No need to promote the read replica in active region, as it's already a replica of a primary
+                custom_logging(chalk.yellow(`${rdsConfig.active_configurations.identifier} is now a read replica in ${environmentConfig.active_region} of the primary ${rdsConfig.failover_configurations.identifier} in ${environmentConfig.failover_region}`));
+            } else {
+                // FAILOVER TO ACTIVE section
+                // First, promote the Active RDS to Primary
+                custom_logging(`Promoting ${environmentConfig.active_region}'s ${rdsConfig.active_configurations.identifier} to primary`);
+                let promoteActiveParams = {
+                    DBInstanceIdentifier: rdsConfig.active_configurations.identifier
+                };
+                await promoteReadReplica(activeRdsClient, promoteActiveParams);
+                
+                // Wait for the active instance to be available after promotion
+                await waitForDbInstanceAvailable(activeRdsClient, rdsConfig.active_configurations.identifier);
+                
+                // Update proxy for active region
+                let describeActiveProxyParams = {
+                    DBProxyName: rdsConfig.active_configurations.proxy_name,
                     DBInstanceIdentifier: rdsConfig.active_configurations.identifier
                 };
 
-                await promoteReadReplica(activeRdsClient, promoteReadReplicationParams);
+                custom_logging(`Getting ${rdsConfig.active_configurations.proxy_name} details in ${environmentConfig.active_region}`);
+                let activeProxyResult = await describeDBProxies(activeRdsClient, describeActiveProxyParams);
 
-                custom_logging(chalk.yellow(`${rdsConfig.active_configurations.identifier} is promoted in ${environmentConfig.active_region}, Please update your DBs connection in applications to newly created Primary RDS in ${environmentConfig.active_region}`))
-                custom_logging(chalk.yellow(`We'll start deleting ${rdsConfig.failover_configurations.identifier} DB in ${environmentConfig.failover_region}`))
-            } else {
-                // FAILOVER TO ACTIVE section
-                // Promotes Failover RDS to Primary
-                custom_logging(`Promoting ${environmentConfig.failover_region}'s ${rdsConfig.failover_configurations.identifier}`)
-                let promoteReadReplicationParams = {
-                    DBInstanceIdentifier: rdsConfig.failover_configurations.identifier
-                }
-                await promoteReadReplica(failoverRdsClient, promoteReadReplicationParams)
+                let updateActiveProxyParams = {
+                    DBProxyName: rdsConfig.active_configurations.proxy_name,
+                    Auth: activeProxyResult.Auth,
+                    IdleClientTimeout: activeProxyResult.IdleClientTimeout,
+                    DebugLogging: activeProxyResult.DebugLogging,
+                    RequireTLS: activeProxyResult.RequireTLS,
+                    RoleArn: activeProxyResult.RoleArn
+                };
 
-                // Update proxy
-                let describeProxyParams = {
-                    DBProxyName: rdsConfig.failover_configurations.proxy_name,
-                    DBInstanceIdentifier: rdsConfig.failover_configurations.identifier
-                }
+                custom_logging(`Updating ${rdsConfig.active_configurations.proxy_name} details in ${environmentConfig.active_region}`);
+                await updateRDSProxy(activeRdsClient, updateActiveProxyParams);
 
-                custom_logging(`Getting ${rdsConfig.failover_configurations.proxy_name} details in ${environmentConfig.failover_region}`);
-                result = await describeDBProxies(failoverRdsClient, describeProxyParams);
-
-                let updateRDSProxyParams = {
-                    DBProxyName: rdsConfig.failover_configurations.proxy_name,
-                    Auth: result.Auth,
-                    IdleClientTimeout: result.IdleClientTimeout,
-                    DebugLogging: result.DebugLogging,
-                    RequireTLS: result.RequireTLS,
-                    RoleArn: result.RoleArn
-                }
-
-                custom_logging(`Updating ${rdsConfig.failover_configurations.proxy_name} details in ${environmentConfig.failover_region}`);
-                await updateRDSProxy(failoverRdsClient, updateRDSProxyParams);
-
-                // Rename the Active RDS and append it with `old` (unless PROCESS_CURRENT_ENV is true)
+                // Rename the Failover RDS and append it with `old` (unless PROCESS_CURRENT_ENV is true)
                 if (!global.PROCESS_CURRENT_ENVIRONMENT) {
-                    await modifyDBInstanceIdentifier(activeRdsClient, rdsConfig.active_configurations);
-                    await waitForDbInstanceAvailable(activeRdsClient, rdsConfig.active_configurations.identifier)
-                
-                    // Create the read replica in Failover of Active RDS
-                    // First get details of active RDS
-                    let activeDbInstanceDetails = await describeDBInstances(activeRdsClient, `${rdsConfig.active_configurations.identifier}-old`)
+                    let renamedFailoverInstanceId = await modifyDBInstanceIdentifier(failoverRdsClient, rdsConfig.failover_configurations);
+                    
+                    // Get active DB details (after promotion)
+                    let activeDbDetails = await describeDBInstances(activeRdsClient, rdsConfig.active_configurations.identifier);
                     const { Account: accountId } = await sts.getCallerIdentity({}).promise();
                     
-                    let createReadReplicaParams = {
+                    // Create read replica in Failover region of the promoted Active instance
+                    let createFailoverReadReplicaParams = {
                         DBInstanceIdentifier: rdsConfig.failover_configurations.identifier,
-                        SourceDBInstanceIdentifier: `arn:aws:rds:${environmentConfig.active_region}:${accountId}:db:${rdsConfig.active_configurations.identifier}-old`,
+                        SourceDBInstanceIdentifier: `arn:aws:rds:${environmentConfig.active_region}:${accountId}:db:${rdsConfig.active_configurations.identifier}`,
                         SourceRegion: environmentConfig.active_region,
-                        DBInstanceClass: activeDbInstanceDetails.DBInstances[0].DBInstanceClass,
+                        DBInstanceClass: activeDbDetails.DBInstances[0].DBInstanceClass,
                         DBSubnetGroupName: rdsConfig.failover_configurations.subnet_group_name,
                         VpcSecurityGroupIds: rdsConfig.failover_configurations.security_group_ids
                     };
                     
                     if (rdsConfig.failover_configurations.hasOwnProperty("kms_key_id") && rdsConfig.failover_configurations.kms_key_id != "")
-                        createReadReplicaParams['KmsKeyId'] = rdsConfig.failover_configurations.kms_key_id
+                        createFailoverReadReplicaParams['KmsKeyId'] = rdsConfig.failover_configurations.kms_key_id;
                     
-                    custom_logging(`Creating read-replica of ${rdsConfig.active_configurations.identifier}-old in ${environmentConfig.failover_region}`);
-                    await createReadReplica(failoverRdsClient, createReadReplicaParams);
+                    custom_logging(`Creating read-replica of ${rdsConfig.active_configurations.identifier} in ${environmentConfig.failover_region}`);
+                    await createReadReplica(failoverRdsClient, createFailoverReadReplicaParams);
+                    
+                    // Wait for the read replica to be available
+                    await waitForDbInstanceAvailable(failoverRdsClient, rdsConfig.failover_configurations.identifier);
+                    
+                    // Update proxy for failover region
+                    let describeFailoverProxyParams = {
+                        DBProxyName: rdsConfig.failover_configurations.proxy_name,
+                        DBInstanceIdentifier: rdsConfig.failover_configurations.identifier
+                    };
+
+                    custom_logging(`Getting ${rdsConfig.failover_configurations.proxy_name} details in ${environmentConfig.failover_region}`);
+                    let failoverProxyResult = await describeDBProxies(failoverRdsClient, describeFailoverProxyParams);
+
+                    let updateFailoverProxyParams = {
+                        DBProxyName: rdsConfig.failover_configurations.proxy_name,
+                        Auth: failoverProxyResult.Auth,
+                        IdleClientTimeout: failoverProxyResult.IdleClientTimeout,
+                        DebugLogging: failoverProxyResult.DebugLogging,
+                        RequireTLS: failoverProxyResult.RequireTLS,
+                        RoleArn: failoverProxyResult.RoleArn
+                    };
+
+                    custom_logging(`Updating ${rdsConfig.failover_configurations.proxy_name} details in ${environmentConfig.failover_region}`);
+                    await updateRDSProxy(failoverRdsClient, updateFailoverProxyParams);
+                }
+                
+                custom_logging(chalk.yellow(`${rdsConfig.active_configurations.identifier} is now the primary in ${environmentConfig.active_region}`));
+                if (!global.PROCESS_CURRENT_ENVIRONMENT) {
+                    custom_logging(chalk.yellow(`${rdsConfig.failover_configurations.identifier} is now a read replica in ${environmentConfig.failover_region}`));
                 }
             }
         }
@@ -556,7 +644,7 @@ const processRds = async (environmentConfig) => {
     catch (error) {
         custom_logging(chalk.red("Error: ") + error.message);
     }
-}
+};
 
 const processFiles = async (file, options) => {
     if (!fs.existsSync(file)) {
@@ -583,7 +671,7 @@ const processFiles = async (file, options) => {
     }
 
     await processRds(configuration)
-}
+};
 
 const mainFunction = async () => {
     program
@@ -631,8 +719,8 @@ const process_rds_failover_deletion = async (environmentConfig) => {
     const { activeRdsClient, failoverRdsClient } = initializeRdsClients(environmentConfig);
 
     for (let rdsConfig of environmentConfig.rds) {
-        let getDbInstanceDetailsparams = { DBInstanceIdentifier: rdsConfig.active_configurations.identifier }
-        let dbInstanceDetails = await checkIfRdsExists(activeRdsClient, getDbInstanceDetailsparams)
+        let getDbInstanceDetailsparams = { DBInstanceIdentifier: rdsConfig.active_configurations.identifier };
+        let dbInstanceDetails = await checkIfRdsExists(activeRdsClient, getDbInstanceDetailsparams);
 
         let deleteDbInstanceparams = {
             DBInstanceIdentifier: rdsConfig.failover_configurations.identifier,
@@ -645,6 +733,9 @@ const process_rds_failover_deletion = async (environmentConfig) => {
         
         // Skip creating read replica if PROCESS_CURRENT_ENVIRONMENT is true
         if (!global.PROCESS_CURRENT_ENVIRONMENT) {
+            // Wait for the active instance to be fully available
+            await waitForDbInstanceAvailable(activeRdsClient, rdsConfig.active_configurations.identifier);
+            
             const { Account: accountId } = await sts.getCallerIdentity({}).promise();
 
             let createReadReplicaParams = {
@@ -656,13 +747,15 @@ const process_rds_failover_deletion = async (environmentConfig) => {
                 VpcSecurityGroupIds: rdsConfig.failover_configurations.security_group_ids
             };
             if (rdsConfig.failover_configurations.hasOwnProperty("kms_key_id") && rdsConfig.failover_configurations.kms_key_id != "")
-                createReadReplicaParams['KmsKeyId'] = rdsConfig.failover_configurations.kms_key_id
+                createReadReplicaParams['KmsKeyId'] = rdsConfig.failover_configurations.kms_key_id;
 
             custom_logging(`Creating read-replica of ${rdsConfig.active_configurations.identifier} in ${environmentConfig.failover_region}`);
-            await waitForDbInstanceAvailable(activeRdsClient, rdsConfig.active_configurations.identifier)
             await createReadReplica(failoverRdsClient, createReadReplicaParams);
+            
+            // Wait for the new read replica to be available
+            await waitForDbInstanceAvailable(failoverRdsClient, rdsConfig.failover_configurations.identifier);
         } else {
             custom_logging(chalk.yellow(`Skipping read-replica creation as PROCESS_CURRENT_ENVIRONMENT is enabled`));
         }
     }
-}
+};
