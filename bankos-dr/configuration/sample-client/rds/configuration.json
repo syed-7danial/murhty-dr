@@ -4,7 +4,7 @@
     "rds":[
         {
             "active_configurations": {
-                "identifier": "testing-04",
+                "identifier": "testing06",
                 "kms_key_id": "40a25d87-c7cd-4162-b7b8-f4fef85b53a5",
                 "subnet_group_name":"default-vpc-0a7fa0729288711d3",
                 "security_group_ids":["sg-0fe9b627833267277"],
