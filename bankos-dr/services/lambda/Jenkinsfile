@@ -36,18 +36,31 @@ pipeline {
                     env.AWS_SESSION_TOKEN = params.AWS_SESSION_TOKEN
                     env.SWITCHING_TO = params.SWITCHING_TO
 
-                    // Split the keywords string into an array
-                    def command = 'node bankos-dr/services/lambda/main.js'
-
-                    env.CLIENT_NAME = params.CLIENT_NAME
-
-                    if (params.DRY_RUN) {
-                        command += ' -dr'
+                    def clientsToProcess = []
+                    if (params.CLIENT_NAME == 'all') {
+                        clientsToProcess = ['FED', 'RTP', 'FED-ACH', 'sample-client']
+                    } else {
+                        clientsToProcess = [params.CLIENT_NAME]
                     }
-                    if (params.PROCESS_CURRENT_ENV) {
-                        command += ' -pce'
+
+                    if (params.PROCESS_COMMON_CONFIG) {
+                        clientsToProcess.add('common')
                     }
-                    sh command
+
+                    for (client in clientsToProcess) {
+                        def command = "node bankos-dr/services/lambda/main.js"
+                        env.CLIENT_NAME = client
+
+                        if (params.DRY_RUN) {
+                            command += ' -dr'
+                        }
+                        if (params.PROCESS_CURRENT_ENV) {
+                            command += ' -pce'
+                        }
+
+                        echo "Running for client: ${client}"
+                        sh command
+                    }
                 }
             }
         }
