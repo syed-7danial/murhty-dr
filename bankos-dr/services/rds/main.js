@@ -228,33 +228,7 @@ const processRds = async (environmentConfig) => {
                 
                 dbInstanceDetails = await describeDBInstances(activeRdsClient, rdsConfig.active_configurations.identifier);
                 const { Account: accountId } = await sts.getCallerIdentity({}).promise();
-
-                // Create read replica in Active region of the promoted Failover instance (unless PROCESS_CURRENT_ENV is true)
-                if (!global.PROCESS_CURRENT_ENVIRONMENT) {
-                    let renamedActiveInstanceId = await modifyDBInstanceIdentifier(failoverRdsClient, rdsConfig.failover_configurations);
-                    
-                    custom_logging(chalk.green(`Successfully renamed to ${renamedActiveInstanceId}`));
-
-                    let createReadReplicaParams = {
-                        DBInstanceIdentifier: rdsConfig.active_configurations.identifier,
-                        SourceDBInstanceIdentifier: `arn:aws:rds:${environmentConfig.active_region}:${accountId}:db:${rdsConfig.active_configurations.identifier}`,
-                        SourceRegion: environmentConfig.active_region,
-                        DBInstanceClass: dbInstanceDetails.DBInstances[0].DBInstanceClass,
-                        DBSubnetGroupName: rdsConfig.failover_configurations.subnet_group_name,
-                        VpcSecurityGroupIds: rdsConfig.failover_configurations.security_group_ids
-                    };
-
-                    if (rdsConfig.failover_configurations.hasOwnProperty("kms_key_id") && rdsConfig.active_configurations.kms_key_id != "")
-                        createReadReplicaParams['KmsKeyId'] = rdsConfig.failover_configurations.kms_key_id
-
-                    custom_logging(`Creating read-replica of ${rdsConfig.active_configurations.identifier} in ${environmentConfig.failover_region}`);
-                    await createReadReplica(failoverRdsClient, createReadReplicaParams);
-                    
-                    // Wait for the read replica to be available
-                    await waitForReplicaPromotionComplete(failoverRdsClient, rdsConfig.active_configurations.identifier);
-                }
-
-                // Update proxy configuration
+                
                 custom_logging(`Getting ${rdsConfig.active_configurations.proxy_name} details in ${environmentConfig.active_region}`);
                 let describeProxyParams = {
                     DBProxyName: rdsConfig.active_configurations.proxy_name,
@@ -275,11 +249,32 @@ const processRds = async (environmentConfig) => {
                 custom_logging(`Updating ${rdsConfig.active_configurations.proxy_name} details in ${environmentConfig.active_region}`);
                 await updateRDSProxy(activeRdsClient, updateRDSProxyParams);
 
-                // No need to promote the read replica in active region, as it's already a replica of a primary
-                custom_logging(chalk.yellow(`${rdsConfig.active_configurations.identifier} is now a read replica in ${environmentConfig.active_region} of the primary ${rdsConfig.failover_configurations.identifier} in ${environmentConfig.failover_region}`));
-                let renamedActiveInstanceId = await modifyDBInstanceIdentifier(activeRdsClient, rdsConfig.active_configurations);
-                custom_logging(chalk.green(`Successfully renamed to ${renamedActiveInstanceId}`));
-                
+                if (!global.PROCESS_CURRENT_ENVIRONMENT) {
+                    let renamedActiveInstanceId = await modifyDBInstanceIdentifier(failoverRdsClient, rdsConfig.failover_configurations);
+                    
+                    custom_logging(chalk.green(`Successfully renamed to ${renamedActiveInstanceId}`));
+
+                    let createReadReplicaParams = {
+                        DBInstanceIdentifier: rdsConfig.active_configurations.identifier,
+                        SourceDBInstanceIdentifier: `arn:aws:rds:${environmentConfig.active_region}:${accountId}:db:${rdsConfig.active_configurations.identifier}`,
+                        SourceRegion: environmentConfig.active_region,
+                        DBInstanceClass: dbInstanceDetails.DBInstances[0].DBInstanceClass,
+                        DBSubnetGroupName: rdsConfig.failover_configurations.subnet_group_name,
+                        VpcSecurityGroupIds: rdsConfig.failover_configurations.security_group_ids
+                    };
+
+                    if (rdsConfig.failover_configurations.hasOwnProperty("kms_key_id") && rdsConfig.active_configurations.kms_key_id != "")
+                        createReadReplicaParams['KmsKeyId'] = rdsConfig.failover_configurations.kms_key_id
+
+                    custom_logging(`Creating read-replica of ${rdsConfig.active_configurations.identifier} in ${environmentConfig.failover_region}`);
+                    await createReadReplica(failoverRdsClient, createReadReplicaParams);
+                    custom_logging(chalk.green(`Successfully created read-replica of ${rdsConfig.failover_configurations.identifier} in ${environmentConfig.active_region}`));
+                }
+
+                custom_logging(chalk.yellow(`${rdsConfig.active_configurations.identifier} is now the primary in ${environmentConfig.active_region}`));
+                if (!global.PROCESS_CURRENT_ENVIRONMENT) {
+                    custom_logging(chalk.yellow(`${rdsConfig.active_configurations.identifier} is now a read replica in ${environmentConfig.failover_region}`));
+                }
             } else {
                 custom_logging(`Promoting ${environmentConfig.failover_region}'s ${rdsConfig.failover_configurations.identifier} to primary`);
                 let promoteActiveParams = {
@@ -336,9 +331,7 @@ const processRds = async (environmentConfig) => {
                     
                     custom_logging(chalk.green(`Creating read-replica of ${rdsConfig.failover_configurations.identifier} in ${environmentConfig.active_region}`));
                     await createReadReplica(activeRdsClient, createFailoverReadReplicaParams);
-                    
                     custom_logging(chalk.green(`Successfully created read-replica of ${rdsConfig.failover_configurations.identifier} in ${environmentConfig.active_region}`));
-                    
                 }
                 
                 custom_logging(chalk.yellow(`${rdsConfig.failover_configurations.identifier} is now the primary in ${environmentConfig.failover_region}`));
