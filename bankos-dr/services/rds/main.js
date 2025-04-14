@@ -467,7 +467,6 @@ const mainFunction = async () => {
         custom_logging(chalk.yellow("Current environment will not be processed"))
 
     let clientFile = path.resolve(__dirname, '..', '..', 'configuration', process.env.CLIENT_NAME, 'rds', 'configuration.json');
-    await processFiles(commonFile, options);
     await processFiles(clientFile, options);
     custom_logging(chalk.green("Process has been completed"));
 };
