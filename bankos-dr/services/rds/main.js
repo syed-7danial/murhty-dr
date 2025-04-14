@@ -206,7 +206,6 @@ const processRds = async (environmentConfig) => {
                     SkipFinalSnapshot: false
                 };
 
-                // If it exists and force_delete is false → Rename the Active RDS and append it with 'old'
                 // If it exists and force_delete is true → Delete the existing Active RDS
                 if (dbInstanceDetails && dbInstanceDetails.DBInstances.length > 0) {
                     if (rdsConfig.force_delete) {
