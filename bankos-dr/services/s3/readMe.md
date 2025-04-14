@@ -90,6 +90,10 @@ When enabled, all planned actions are logged but no actual changes are made to S
 
 ### Process Current Environment:
 When enabled, removes event notifications from the currently active S3 bucket to ensure a clean switch without conflicts.
+
+#### Process Common Config
+Includes the common folder client for configuration, otherwise the jenkins pipeline would not handle any clients.
+
 ### Targeted Modifications:
 Only S3 event notifications specified in the configuration are modified.
 Other S3 settings (e.g., bucket policy, lifecycle rules) remain unaffected.

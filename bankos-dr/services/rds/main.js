@@ -287,11 +287,7 @@ const processRds = async (environmentConfig) => {
                 await updateRDSProxy(activeRdsClient, updateRDSProxyParams);
 
                 custom_logging(`Registering ${rdsConfig.active_configurations.identifier} with proxy ${rdsConfig.active_configurations.proxy_name} in ${environmentConfig.active_region}`);
-                const registerProxyParams = {
-                    DBProxyName: rdsConfig.active_configurations.proxy_name,
-                    TargetGroupName: 'default',
-                    DBInstanceIdentifiers: [rdsConfig.active_configurations.identifier]
-                };
+                
                 await updateProxyTargets(activeRdsClient, rdsConfig.active_configurations.proxy_name, rdsConfig.active_configurations.identifier);
 
                 if (!global.PROCESS_CURRENT_ENVIRONMENT) {
@@ -371,11 +367,6 @@ const processRds = async (environmentConfig) => {
                 await updateRDSProxy(failoverRdsClient, updateActiveProxyParams);
                 
                 custom_logging(`Registering ${rdsConfig.failover_configurations.identifier} with proxy ${rdsConfig.failover_configurations.proxy_name} in ${environmentConfig.failover_region}`);
-                const registerFailoverProxyParams = {
-                    DBProxyName: rdsConfig.failover_configurations.proxy_name,
-                    TargetGroupName: 'default',
-                    DBInstanceIdentifiers: [rdsConfig.failover_configurations.identifier]
-                };
                 await updateProxyTargets(failoverRdsClient, rdsConfig.failover_configurations.proxy_name, rdsConfig.failover_configurations.identifier);
 
                 if (!global.PROCESS_CURRENT_ENVIRONMENT) {

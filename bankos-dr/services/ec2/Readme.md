@@ -56,3 +56,6 @@ When enabled, actions are logged but no real changes are made to ec2 instances.
 
 ### Current Environment Processing:
 When enabled, the script can also stops the instance from the current environment instances, making the switch more complete.
+
+#### Process Common Config
+Includes the common folder client for configuration, otherwise the jenkins pipeline would not handle any clients.

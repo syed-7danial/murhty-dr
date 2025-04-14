@@ -97,7 +97,7 @@ const mainFunction = async () => {
 
   const options = program.opts();
   global.DRY_RUN = options.dryRun || false;
-  const configFile = path.resolve(__dirname, '..', '..', 'configuration', "common", 's3', 'configuration.json');
+  const configFile = path.resolve(__dirname, '..', '..', 'configuration', process.env.CLIENT_NAME, 's3', 'configuration.json');
   let config = await readAndParseFile(configFile);
   config['switching_to'] = process.env.SWITCHING_TO;
   const processCurrentEnv = process.env.PROCESS_CURRENT_ENV === 'true';

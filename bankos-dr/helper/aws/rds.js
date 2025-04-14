@@ -91,12 +91,6 @@ const deregisterDBProxyTargets = async (rdsClient, params) => {
     }
 };
 
-
-const updateRDSProxy =async (rdsClient, getDbInstanceDetailsparams) => {
-    let response = await rdsClient.modifyDBProxy(getDbInstanceDetailsparams).promise();
-    return response
-}
-
 const registerDBProxyTargets = async (rdsClient, getDbProxyTargetsparams) => {
     try {
         const result = await rdsClient.registerDBProxyTargets(getDbProxyTargetsparams).promise();
@@ -106,6 +100,11 @@ const registerDBProxyTargets = async (rdsClient, getDbProxyTargetsparams) => {
         throw error;
     }
 };
+
+const updateRDSProxy =async (rdsClient, getDbInstanceDetailsparams) => {
+    let response = await rdsClient.modifyDBProxy(getDbInstanceDetailsparams).promise();
+    return response
+}
 
 const deleteDbInstance = async (rdsClient, deleteDbInstanceparams) => {
     await rdsClient.deleteDBInstance(deleteDbInstanceparams).promise();

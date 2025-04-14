@@ -12,6 +12,31 @@ Option to process the current environment is controlled via the Jenkins pipeline
 ### Configuration Check
 Before execution, run-rds.js performs the following checks:
 
+## Multi-Client Handling
+
+This script supports processing **multiple clients dynamically** based on the CLIENT_NAME parameter passed through the Jenkins pipeline.
+
+### How It Works
+
+The CLIENT_NAME parameter can be set to:
+  - A specific client name (e.g., `FED`, `RTP`, etc.)
+  - `All` — which triggers the script to run for all configured clients.
+
+Additionally, enabling `PROCESS_COMMON_CONFIG` will add the **common configuration** to the client list for processing.
+
+### Example Behaviors
+
+| CLIENT_NAME | PROCESS_COMMON_CONFIG | Clients Processed                                      |
+|-------------|------------------------|--------------------------------------------------------|
+| `FED`       | `false`                | `FED`                                                  |
+| `All`       | `false`                | `FED`, `RTP`, `FED-ACH`, `sample-client`              |
+| `All`       | `true`                 | `FED`, `RTP`, `FED-ACH`, `sample-client`, `common`    |
+| `RTP`       | `true`                 | `RTP`, `common`                                        |
+
+For each client in the list:
+- The script will be executed separately.
+- RDS configurations will be updated as needed.
+
 #### Process Current Environment:
 Specifies whether to also handle cleanup or verification for the currently active environment.
 
@@ -35,6 +60,9 @@ This ensures that:
 
 Failover RDS becomes the new primary instance, ready to handle production traffic.
 Active region RDS remains untouched unless a manual restoration is triggered later.
+
+The previous RDS instane has "old" appended to its name
+The read replica of the newly promoted RDS is made in the active region 
 ### Note:
 Only the RDS instances defined in the configuration are modified.
 No other RDS instances or databases are affected.
@@ -75,6 +103,10 @@ Active region RDS becomes the new primary.
 
 Failover RDS is decommissioned and replaced with a 
 fresh replica of the new Active RDS, maintaining high availability.
+
+The previous RDS instane has "old" appended to its name
+
+The read replica of the newly promoted RDS is made in the active region 
 ### Note:
 Only the RDS instances defined in the configuration are affected.
 All actions are subject to force_delete flag and explicit user confirmation.

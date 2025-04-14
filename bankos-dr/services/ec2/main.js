@@ -66,7 +66,7 @@ const mainFunction = async () => {
 
   const options = program.opts();
   
-  const file = path.resolve(__dirname, '..', '..', 'configuration', "common", 'ec2', 'configuration.json');
+  const file = path.resolve(__dirname, '..', '..', 'configuration', process.env.CLIENT_NAME, 'ec2', 'configuration.json');
   let envs = await readAndParseFile(file);
   envs['switching_to'] = process.env.SWITCHING_TO;
 

@@ -134,13 +134,9 @@ const mainFunction = async () => {
         custom_logging(chalk.yellow("Current environment will not be processed"));
     }
 
-    let commonFile = path.resolve(__dirname, '..', '..', 'configuration', 'common', 'cloudfront', 'configuration.json');
     let clientFile = path.resolve(__dirname, '..', '..', 'configuration', process.env.CLIENT_NAME, 'cloudfront', 'configuration.json');
-    
-    await processFiles(commonFile);
     await processFiles(clientFile);
     
-
     custom_logging(chalk.green("Process has been completed"));
 }    
 

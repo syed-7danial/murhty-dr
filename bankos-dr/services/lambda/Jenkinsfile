@@ -8,7 +8,7 @@ pipeline {
     }
     parameters {
         choice(name: 'SWITCHING_TO', choices: ['ACTIVE', 'FAILOVER'], description: 'Select the environment')
-        choice(name: 'CLIENT_NAME', choices: ['FED', 'RTP', 'FED-ACH', 'sample-client', 'all'], description: 'Select the CLIENT_NAME')
+        choice(name: 'CLIENT_NAME', choices: ['FED', 'RTP', 'FED-ACH', 'sample-client', 'All'], description: 'Select the CLIENT_NAME')
         password(name: 'AWS_ACCESS_KEY_ID', defaultValue: '', description: 'AWS_ACCESS_KEY_ID')
         password(name: 'AWS_SECRET_ACCESS_KEY', defaultValue: '', description: 'AWS_SECRET_ACCESS_KEY')
         password(name: 'AWS_SESSION_TOKEN', defaultValue: '', description: 'AWS_SESSION_TOKEN')
@@ -37,7 +37,7 @@ pipeline {
                     env.SWITCHING_TO = params.SWITCHING_TO
 
                     def clientsToProcess = []
-                    if (params.CLIENT_NAME == 'all') {
+                    if (params.CLIENT_NAME == 'All') {
                         clientsToProcess = ['FED', 'RTP', 'FED-ACH', 'sample-client']
                     } else {
                         clientsToProcess = [params.CLIENT_NAME]
