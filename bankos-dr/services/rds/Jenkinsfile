@@ -17,7 +17,6 @@ pipeline {
         password(name: 'AWS_SECRET_ACCESS_KEY', defaultValue: '', description: 'AWS_SECRET_ACCESS_KEY')
         password(name: 'AWS_SESSION_TOKEN', defaultValue: '', description: 'AWS_SESSION_TOKEN')
 
-        booleanParam(name: 'FORCE_DELETE', defaultValue: false, description: 'Check this to set force_delete to true')
         booleanParam(name: 'PROCESS_CURRENT_ENV', defaultValue: false, description: 'Check this to process current environment')
         booleanParam(name: 'PROCESS_COMMON_CONFIG', defaultValue: false, description: 'Process common configuration')
     }
@@ -40,7 +39,6 @@ pipeline {
                     env.AWS_SESSION_TOKEN = params.AWS_SESSION_TOKEN
 
                     // Set environment variables
-                    env.FORCE_DELETE = params.FORCE_DELETE
                     env.SWITCHING_TO = params.SWITCHING_TO
 
                     def clientsToProcess = []

@@ -211,12 +211,28 @@ const modifyDBInstanceIdentifier = async (rds, dbInstanceIdentifier) => {
     const newDbInstanceIdentifier = `${originalDbName}-old`;
 
     try {
+        let getDbInstanceDetailsparams = { DBInstanceIdentifier: newDbInstanceIdentifier}
+        let dbInstanceDetails = await checkIfRdsExists(rds, getDbInstanceDetailsparams)
+        let currentDateTime = new Date().toISOString();
+        currentDateTime = currentDateTime.replaceAll("T", "-").replaceAll(":", "-").split(".")[0]
+        
+        if (dbInstanceDetails) {
+           var deleteDbInstanceparams = {
+                DBInstanceIdentifier: newDbInstanceIdentifier,
+                FinalDBSnapshotIdentifier: newDbInstanceIdentifier + currentDateTime,
+                SkipFinalSnapshot: false
+            };
+            custom_logging(chalk.red(`An old generation of ${newDbInstanceIdentifier} exist, deleting it...`));
+            await deleteDbInstance(rds, deleteDbInstanceparams);
+            await waitForDbInstanceDeletion(rds, deleteDbInstanceparams.DBInstanceIdentifier);
+        }
+
         await rds.modifyDBInstance({
             DBInstanceIdentifier: originalDbName,
             NewDBInstanceIdentifier: newDbInstanceIdentifier,
             ApplyImmediately: true
         }).promise();
-        
+
         custom_logging(chalk.green(`Renaming DB instance ${originalDbName} to ${newDbInstanceIdentifier}...`));
         
         await waitForDbRenameComplete(rds, originalDbName, newDbInstanceIdentifier);
@@ -235,25 +251,6 @@ const processRds = async (environmentConfig) => {
     try {
         for (let rdsConfig of environmentConfig.rds) {
             if (environmentConfig.switching_to == "ACTIVE") {
-                // custom_logging(`Checking if ${rdsConfig.active_configurations.identifier} already exists in ${environmentConfig.active_region}`);
-                // let getDbInstanceDetailsparams = { DBInstanceIdentifier: rdsConfig.active_configurations.identifier }
-                // let dbInstanceDetails = await checkIfRdsExists(activeRdsClient, getDbInstanceDetailsparams)
-                // let currentDateTime = new Date().toISOString();
-                // currentDateTime = currentDateTime.replaceAll("T", "-").replaceAll(":", "-").split(".")[0]
-
-                // var deleteDbInstanceparams = {
-                //     DBInstanceIdentifier: rdsConfig.active_configurations.identifier,
-                //     FinalDBSnapshotIdentifier: rdsConfig.active_configurations.identifier + currentDateTime,
-                //     SkipFinalSnapshot: false
-                // };
-
-                // if (dbInstanceDetails && dbInstanceDetails.DBInstances.length > 0) {
-                //     if (rdsConfig.force_delete) {
-                //         custom_logging(chalk.red(`Deleting ${environmentConfig.active_region}'s ${rdsConfig.active_configurations.identifier}`));
-                //         await deleteDbInstance(activeRdsClient, deleteDbInstanceparams);
-                //         await waitForDbInstanceDeletion(activeRdsClient, deleteDbInstanceparams.DBInstanceIdentifier);
-                //     }
-                // }
                 
                 custom_logging(`Promoting ${environmentConfig.active_region}'s ${rdsConfig.active_configurations.identifier} to primary`);
                 let promoteFailoverParams = {
@@ -318,26 +315,6 @@ const processRds = async (environmentConfig) => {
                 }
             } 
             else {
-                // custom_logging(`Checking if ${rdsConfig.failover_configurations.identifier} already exists in ${environmentConfig.failover_region}`);
-                // let getDbInstanceDetailsparams = { DBInstanceIdentifier: rdsConfig.failover_configurations.identifier }
-                // let dbInstanceDetails = await checkIfRdsExists(failoverRdsClient, getDbInstanceDetailsparams)
-                // let currentDateTime = new Date().toISOString();
-                // currentDateTime = currentDateTime.replaceAll("T", "-").replaceAll(":", "-").split(".")[0]
-
-                // var deleteDbInstanceparams = {
-                //     DBInstanceIdentifier: rdsConfig.failover_configurations.identifier,
-                //     FinalDBSnapshotIdentifier: rdsConfig.failover_configurations.identifier + currentDateTime,
-                //     SkipFinalSnapshot: false
-                // };
-
-                // if (dbInstanceDetails && dbInstanceDetails.DBInstances.length > 0) {
-                //     if (rdsConfig.force_delete) {
-                //         custom_logging(chalk.red(`Deleting ${environmentConfig.failover_region}'s ${rdsConfig.failover_configurations.identifier}`));
-                //         await deleteDbInstance(failoverRdsClient, deleteDbInstanceparams);
-                //         await waitForDbInstanceDeletion(failoverRdsClient, deleteDbInstanceparams.DBInstanceIdentifier);
-                //     }
-                // }
-
                 custom_logging(`Promoting ${environmentConfig.failover_region}'s ${rdsConfig.failover_configurations.identifier} to primary`);
                 let promoteActiveParams = {
                     DBInstanceIdentifier: rdsConfig.failover_configurations.identifier
@@ -418,18 +395,7 @@ const processFiles = async (file, options) => {
     configuration.switching_to = process.env.SWITCHING_TO
     configuration['CLIENT_NAME'] = process.env.CLIENT_NAME
     configuration['rds'] = [...fileConfig.rds]
-    configuration.rds = fileConfig.rds.map(rdsConfig => ({
-        ...rdsConfig,
-        force_delete: process.env.FORCE_DELETE === 'true'
-    }));
     custom_logging(`Switching to ${chalk.green(configuration.switching_to)} environment`)
-
-    if (options.deleteFailoverRds) {
-        await process_rds_failover_deletion(configuration)
-        custom_logging(chalk.green("Process has been completed"));
-        return;
-    }
-
     await processRds(configuration)
 };
 
@@ -438,8 +404,7 @@ const mainFunction = async () => {
         .version('0.0.1')
         .option('-dr --dryRun', "Dry run the process")
         .option('-pce --processCurrentEnvironment', "Whether to perform the process on current environment")
-        .option('-d --deleteFailoverRds', "Delete the Rds in failover region")
-
+        
         .parse(process.argv);
 
     const options = program.opts();
@@ -469,51 +434,3 @@ mainFunction()
     .catch((error) => {
         custom_logging(chalk.red("Error: ") + error.message);
     });
-
-const process_rds_failover_deletion = async (environmentConfig) => {
-    const sts = new AWS.STS();
-    custom_logging(chalk.green("Starting process on RDS FAILOVER DELETION"));
-
-    const { activeRdsClient, failoverRdsClient } = initializeRdsClients(environmentConfig);
-
-    for (let rdsConfig of environmentConfig.rds) {
-        let getDbInstanceDetailsparams = { DBInstanceIdentifier: rdsConfig.active_configurations.identifier };
-        let dbInstanceDetails = await checkIfRdsExists(activeRdsClient, getDbInstanceDetailsparams);
-
-        let deleteDbInstanceparams = {
-            DBInstanceIdentifier: rdsConfig.failover_configurations.identifier,
-            SkipFinalSnapshot: true
-        };
-        custom_logging(`Deleting ${rdsConfig.failover_configurations.identifier} in ${environmentConfig.failover_region}`);
-        await deleteDbInstance(failoverRdsClient, deleteDbInstanceparams, rdsConfig);
-
-        await waitForDbInstanceDeletion(failoverRdsClient, deleteDbInstanceparams.DBInstanceIdentifier);
-        
-        // Skip creating read replica if PROCESS_CURRENT_ENVIRONMENT is true
-        if (!global.PROCESS_CURRENT_ENVIRONMENT) {
-            // Wait for the active instance to be fully available
-            await waitForDbInstanceAvailable(activeRdsClient, rdsConfig.active_configurations.identifier);
-            
-            const { Account: accountId } = await sts.getCallerIdentity({}).promise();
-
-            let createReadReplicaParams = {
-                DBInstanceIdentifier: rdsConfig.failover_configurations.identifier,
-                SourceDBInstanceIdentifier: `arn:aws:rds:${environmentConfig.active_region}:${accountId}:db:${rdsConfig.active_configurations.identifier}`,
-                SourceRegion: environmentConfig.active_region,
-                DBInstanceClass: dbInstanceDetails.DBInstances[0].DBInstanceClass,
-                DBSubnetGroupName: rdsConfig.failover_configurations.subnet_group_name,
-                VpcSecurityGroupIds: rdsConfig.failover_configurations.security_group_ids
-            };
-            if (rdsConfig.failover_configurations.hasOwnProperty("kms_key_id") && rdsConfig.failover_configurations.kms_key_id != "")
-                createReadReplicaParams['KmsKeyId'] = rdsConfig.failover_configurations.kms_key_id;
-
-            custom_logging(`Creating read-replica of ${rdsConfig.active_configurations.identifier} in ${environmentConfig.failover_region}`);
-            await createReadReplica(failoverRdsClient, createReadReplicaParams);
-            
-            // Wait for the new read replica to be available
-            await waitForDbInstanceAvailable(failoverRdsClient, rdsConfig.failover_configurations.identifier);
-        } else {
-            custom_logging(chalk.yellow(`Skipping read-replica creation as PROCESS_CURRENT_ENVIRONMENT is enabled`));
-        }
-    }
-};
