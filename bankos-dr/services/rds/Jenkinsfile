@@ -68,44 +68,6 @@ pipeline {
                 }
             }
         }
-
-        stage('User Input for Active Environment') {
-            when {
-                expression { return params.SWITCHING_TO == 'ACTIVE' }
-            }
-            steps {
-                script {
-                    env.USER_ACTION = input message: 'Please choose an option:', ok: 'Continue',
-                        parameters: [
-                            choice(name: 'ACTION', choices: ['Delete RDS', 'Abort'], description: 'Select the action to perform'),
-                        ]
-                    
-                    echo "User selected action: ${env.USER_ACTION}"
-                }
-            }
-        }
-
-        stage('Deploy') {
-            when {
-                expression { return env.USER_ACTION == 'Delete RDS' && params.SWITCHING_TO == 'ACTIVE' }
-            }
-            steps {
-                script {
-                    echo 'Deleting RDS...'
-                    def deleteCommand = "node bankos-dr/services/rds/main.js -d"
-                    sh deleteCommand
-                }
-            }
-        }
-
-        stage('Abort') {
-            when {
-                expression { return env.USER_ACTION == 'Abort' && params.SWITCHING_TO == 'ACTIVE' }
-            }
-            steps {
-                echo 'RDS is not deleted.'
-            }
-        }
     }
 
     post {
