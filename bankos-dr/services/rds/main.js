@@ -31,7 +31,10 @@ const {
     describeDBInstances,
     describeDBProxies,
     updateRDSProxy,
-    registerDBProxyTargets
+    registerDBProxyTargets,
+    describeDBProxyTargetGroups,
+    describeDBProxyTargets,
+    deregisterDBProxyTargets
 } = require('../../helper/aws/rds.js');
 
 const waitForDbInstanceAvailable = async (rdsClient, dbInstanceIdentifier) => {
@@ -54,6 +57,57 @@ const waitForDbInstanceAvailable = async (rdsClient, dbInstanceIdentifier) => {
             custom_logging(chalk.red(`Error: Failed to check status of ${dbInstanceIdentifier}.`));
             throw error;
         }
+    }
+};
+
+const updateProxyTargets = async (rdsClient, proxyName, newDbInstanceId) => {
+    try {
+        custom_logging(`Getting target groups for proxy ${proxyName}`);
+        const targetGroups = await describeDBProxyTargetGroups(rdsClient, {
+            DBProxyName: proxyName
+        });
+        
+        if (!targetGroups.TargetGroups || targetGroups.TargetGroups.length === 0) {
+            throw new Error(`No target group found for proxy ${proxyName}`);
+        }
+        
+        const targetGroupName = targetGroups.TargetGroups[0].TargetGroupName;
+        
+        custom_logging(`Getting current targets for proxy ${proxyName} target group ${targetGroupName}`);
+        const currentTargets = await describeDBProxyTargets(rdsClient, {
+            DBProxyName: proxyName,
+            TargetGroupName: targetGroupName
+        });
+        
+        if (currentTargets.Targets && currentTargets.Targets.length > 0) {
+            const dbInstanceIdentifiers = currentTargets.Targets
+                .filter(target => target.Type === 'RDS_INSTANCE')
+                .map(target => target.RdsResourceId);
+            
+            if (dbInstanceIdentifiers.length > 0) {
+                custom_logging(`Deregistering existing targets: ${dbInstanceIdentifiers.join(', ')} from proxy ${proxyName}`);
+                await deregisterDBProxyTargets(rdsClient, {
+                    DBProxyName: proxyName,
+                    TargetGroupName: targetGroupName,
+                    DBInstanceIdentifiers: dbInstanceIdentifiers
+                });
+                
+                custom_logging(chalk.yellow(`Waiting for target deregistration to complete...`));
+                await new Promise(resolve => setTimeout(resolve, 15000));
+            }
+        }
+        
+        custom_logging(`Registering new target ${newDbInstanceId} with proxy ${proxyName}`);
+        await registerDBProxyTargets(rdsClient, {
+            DBProxyName: proxyName,
+            TargetGroupName: targetGroupName,
+            DBInstanceIdentifiers: [newDbInstanceId]
+        });
+        
+        custom_logging(chalk.green(`Successfully updated targets for proxy ${proxyName}`));
+    } catch (error) {
+        custom_logging(chalk.red(`Error updating proxy targets: ${error.message}`));
+        throw error;
     }
 };
 
@@ -238,7 +292,7 @@ const processRds = async (environmentConfig) => {
                     TargetGroupName: 'default',
                     DBInstanceIdentifiers: [rdsConfig.active_configurations.identifier]
                 };
-                await registerDBProxyTargets(activeRdsClient, registerProxyParams);
+                await updateProxyTargets(activeRdsClient, rdsConfig.active_configurations.proxy_name, rdsConfig.active_configurations.identifier);
 
                 if (!global.PROCESS_CURRENT_ENVIRONMENT) {
                     let renamedActiveInstanceId = await modifyDBInstanceIdentifier(failoverRdsClient, rdsConfig.failover_configurations);
@@ -287,7 +341,7 @@ const processRds = async (environmentConfig) => {
                         await waitForDbInstanceDeletion(failoverRdsClient, deleteDbInstanceparams.DBInstanceIdentifier);
                     }
                 }
-                
+
                 custom_logging(`Promoting ${environmentConfig.failover_region}'s ${rdsConfig.failover_configurations.identifier} to primary`);
                 let promoteActiveParams = {
                     DBInstanceIdentifier: rdsConfig.failover_configurations.identifier
@@ -322,7 +376,7 @@ const processRds = async (environmentConfig) => {
                     TargetGroupName: 'default',
                     DBInstanceIdentifiers: [rdsConfig.failover_configurations.identifier]
                 };
-                await registerDBProxyTargets(failoverRdsClient, registerFailoverProxyParams);
+                await updateProxyTargets(failoverRdsClient, rdsConfig.failover_configurations.proxy_name, rdsConfig.failover_configurations.identifier);
 
                 if (!global.PROCESS_CURRENT_ENVIRONMENT) {
                     let renamedActiveInstanceId = await modifyDBInstanceIdentifier(activeRdsClient, rdsConfig.active_configurations);
@@ -412,7 +466,6 @@ const mainFunction = async () => {
     else
         custom_logging(chalk.yellow("Current environment will not be processed"))
 
-    let commonFile = path.resolve(__dirname, '..', '..', 'configuration', "common", 'rds', 'configuration.json');
     let clientFile = path.resolve(__dirname, '..', '..', 'configuration', process.env.CLIENT_NAME, 'rds', 'configuration.json');
     await processFiles(commonFile, options);
     await processFiles(clientFile, options);

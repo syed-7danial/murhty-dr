@@ -61,6 +61,37 @@ const describeDBProxies =async (rdsClient, getDbInstanceDetailsparams) => {
     return response
 }
 
+const describeDBProxyTargetGroups = async (rdsClient, params) => {
+    try {
+        const result = await rdsClient.describeDBProxyTargetGroups(params).promise();
+        return result;
+    } catch (error) {
+        console.error(`Error describing DB proxy target groups: ${error.message}`);
+        throw error;
+    }
+};
+
+const describeDBProxyTargets = async (rdsClient, params) => {
+    try {
+        const result = await rdsClient.describeDBProxyTargets(params).promise();
+        return result;
+    } catch (error) {
+        console.error(`Error describing DB proxy targets: ${error.message}`);
+        throw error;
+    }
+};
+
+const deregisterDBProxyTargets = async (rdsClient, params) => {
+    try {
+        const result = await rdsClient.deregisterDBProxyTargets(params).promise();
+        return result;
+    } catch (error) {
+        console.error(`Error deregistering DB proxy targets: ${error.message}`);
+        throw error;
+    }
+};
+
+
 const updateRDSProxy =async (rdsClient, getDbInstanceDetailsparams) => {
     let response = await rdsClient.modifyDBProxy(getDbInstanceDetailsparams).promise();
     return response
@@ -89,5 +120,8 @@ module.exports = {
     describeDBInstances,
     describeDBProxies,
     updateRDSProxy,
-    registerDBProxyTargets
+    registerDBProxyTargets,
+    describeDBProxyTargetGroups,
+    describeDBProxyTargets,
+    deregisterDBProxyTargets
 };
