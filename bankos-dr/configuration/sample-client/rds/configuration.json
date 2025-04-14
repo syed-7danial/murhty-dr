@@ -4,14 +4,14 @@
     "rds":[
         {
             "active_configurations": {
-                "identifier": "database-1-rr-2",
+                "identifier": "database-1",
                 "kms_key_id": "40a25d87-c7cd-4162-b7b8-f4fef85b53a5",
                 "subnet_group_name":"default-vpc-02f6f922e607860ae",
                 "security_group_ids":["sg-03b66c0f312786cea"],
                 "proxy_name": "database-1"
             },
             "failover_configurations": {
-                "identifier": "database-1-rr-3",
+                "identifier": "database-1",
                 "kms_key_id": "ff9aceb7-a089-4dcd-8aee-9e50e62e7c89",
                 "subnet_group_name":"testing-danial",
                 "security_group_ids":["sg-0dff47eb975b55e6e"],
