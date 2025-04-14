@@ -4,7 +4,7 @@
     "rds":[
         {
             "active_configurations": {
-                "identifier": "database-1-rr",
+                "identifier": "database-1-rr-2",
                 "kms_key_id": "40a25d87-c7cd-4162-b7b8-f4fef85b53a5",
                 "subnet_group_name":"default-vpc-02f6f922e607860ae",
                 "security_group_ids":["sg-03b66c0f312786cea"],
