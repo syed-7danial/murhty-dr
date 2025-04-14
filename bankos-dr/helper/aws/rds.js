@@ -66,6 +66,16 @@ const updateRDSProxy =async (rdsClient, getDbInstanceDetailsparams) => {
     return response
 }
 
+const registerDBProxyTargets = async (rdsClient, getDbProxyTargetsparams) => {
+    try {
+        const result = await rdsClient.registerDBProxyTargets(getDbProxyTargetsparams).promise();
+        return result;
+    } catch (error) {
+        console.error(`Error registering DB proxy target: ${error.message}`);
+        throw error;
+    }
+};
+
 const deleteDbInstance = async (rdsClient, deleteDbInstanceparams) => {
     await rdsClient.deleteDBInstance(deleteDbInstanceparams).promise();
 };
@@ -78,5 +88,6 @@ module.exports = {
     createReadReplica,
     describeDBInstances,
     describeDBProxies,
-    updateRDSProxy
+    updateRDSProxy,
+    registerDBProxyTargets
 };
