@@ -3,13 +3,14 @@ pipeline {
 
     parameters {
         choice(name: 'SWITCHING_TO', choices: ['ACTIVE', 'FAILOVER'], description: 'Select the environment')
-        choice(name: 'CLIENT_NAME', choices: ['FED', 'RTP', 'FED-ACH','sample-client'], description: 'Select the CLIENT_NAME')        
+        choice(name: 'CLIENT_NAME', choices: ['FED', 'RTP', 'FED-ACH','sample-client', 'all'], description: 'Select the CLIENT_NAME')        
         password(name: 'AWS_ACCESS_KEY_ID', defaultValue: '', description: 'AWS_ACCESS_KEY_ID')
         password(name: 'AWS_SECRET_ACCESS_KEY', defaultValue: '', description: 'AWS_SECRET_ACCESS_KEY')
         password(name: 'AWS_SESSION_TOKEN', defaultValue: '', description: 'AWS_SESSION_TOKEN')
 
         booleanParam(name: 'FORCE_DELETE', defaultValue: false, description: 'Check this to set force_delete to true')
         booleanParam(name: 'PROCESS_CURRENT_ENV', defaultValue: false, description: 'Check this to process current environment')
+        booleanParam(name: 'PROCESS_COMMON_CONFIG', defaultValue: false, description: 'Process common configuration')
     }
 
     stages {
@@ -33,13 +34,30 @@ pipeline {
 
                     // Set environment variables
                     env.FORCE_DELETE = params.FORCE_DELETE
-                    env.CLIENT_NAME = params.CLIENT_NAME
                     env.SWITCHING_TO = params.SWITCHING_TO
+
+                    def clientsToProcess = []
+                    if (params.CLIENT_NAME == 'all') {
+                        clientsToProcess = ['FED', 'RTP', 'FED-ACH', 'sample-client']
+                    } else {
+                        clientsToProcess = [params.CLIENT_NAME]
+                    }
+
+                    if (params.PROCESS_COMMON_CONFIG) {
+                        clientsToProcess.add('common')
+                    }
                     
-                    if (params.PROCESS_CURRENT_ENV) 
-                        command += " -pce"
-                    
-                    sh command
+                    for (client in clientsToProcess) {
+                        def command = "node bankos-dr/services/rds/main.js"
+                        env.CLIENT_NAME = client
+
+                        if (params.PROCESS_CURRENT_ENV) {
+                            command += ' -pce'
+                        }
+
+                        echo "Running for client: ${client}"
+                        sh command
+                    }
                 }
             }
         }

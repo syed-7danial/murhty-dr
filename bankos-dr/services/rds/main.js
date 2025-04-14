@@ -100,7 +100,6 @@ const waitForReplicaPromotionComplete = async (rdsClient, dbInstanceIdentifier) 
                 }
             } else {
                 custom_logging(chalk.yellow(`Waiting for ${dbInstanceIdentifier} promotion to complete. Current status: ${dbInstance.DBInstanceStatus}`));
-                custom_logging(chalk.yellow(`Read Replica Source: ${dbInstance.ReadReplicaSourceDBInstanceIdentifier || 'None (good)'}`));
                 await new Promise(resolve => setTimeout(resolve, global.SLEEP_TIME ? global.SLEEP_TIME * 60 : 30000));
             }
         } catch (error) {
@@ -269,6 +268,26 @@ const processRds = async (environmentConfig) => {
                 }
             } 
             else {
+                custom_logging(`Checking if ${rdsConfig.failover_configurations.identifier} already exists in ${environmentConfig.failover_region}`);
+                let getDbInstanceDetailsparams = { DBInstanceIdentifier: rdsConfig.failover_configurations.identifier }
+                let dbInstanceDetails = await checkIfRdsExists(failoverRdsClient, getDbInstanceDetailsparams)
+                let currentDateTime = new Date().toISOString();
+                currentDateTime = currentDateTime.replaceAll("T", "-").replaceAll(":", "-").split(".")[0]
+
+                var deleteDbInstanceparams = {
+                    DBInstanceIdentifier: rdsConfig.failover_configurations.identifier,
+                    FinalDBSnapshotIdentifier: rdsConfig.failover_configurations.identifier + currentDateTime,
+                    SkipFinalSnapshot: false
+                };
+
+                if (dbInstanceDetails && dbInstanceDetails.DBInstances.length > 0) {
+                    if (rdsConfig.force_delete) {
+                        custom_logging(chalk.red(`Deleting ${environmentConfig.failover_region}'s ${rdsConfig.failover_configurations.identifier}`));
+                        await deleteDbInstance(failoverRdsClient, deleteDbInstanceparams);
+                        await waitForDbInstanceDeletion(failoverRdsClient, deleteDbInstanceparams.DBInstanceIdentifier);
+                    }
+                }
+                
                 custom_logging(`Promoting ${environmentConfig.failover_region}'s ${rdsConfig.failover_configurations.identifier} to primary`);
                 let promoteActiveParams = {
                     DBInstanceIdentifier: rdsConfig.failover_configurations.identifier
