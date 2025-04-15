@@ -24,7 +24,7 @@ const checkIfRdsExists = async (rdsClient, getDbInstanceDetailsparams) => {
     }
     catch(error) {
         if (error.code == "DBInstanceNotFound")
-            custom_logging(chalk.red("Error: ") + error.message);
+            custom_logging(chalk.red(`Database ${getDbInstanceDetailsparams.DBInstanceIdentifier} has not been found. Proceeding...`));
     }
     return activeDbInstanceDetails
 
