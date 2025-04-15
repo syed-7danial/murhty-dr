@@ -255,6 +255,26 @@ const processRds = async (environmentConfig) => {
                     }
                 }
                 
+                dbInstanceDetails = await describeDBInstances(failoverRdsClient, rdsConfig.failover_configurations.identifier)
+                const { Account: accountId} = await sts.getCallerIdentity({}).promise();
+
+                let createReadReplicaParams = {
+                    DBInstanceIdentifier: rdsConfig.active_configurations.identifier,
+                    SourceDBInstanceIdentifier: `arn:aws:rds:${environmentConfig.failover_region}:${accountId}:db:${rdsConfig.failover_configurations.identifier}`, 
+                    SourceRegion: environmentConfig.failover_region,
+                    DBInstanceClass: dbInstanceDetails.DBInstances[0].DBInstanceClass,
+                    DBSubnetGroupName: rdsConfig.active_configurations.subnet_group_name,
+                    VpcSecurityGroupIds: rdsConfig.active_configurations.security_group_ids
+                };
+
+                if (rdsConfig.active_configurations.hasOwnProperty("kms_key_id") && rdsConfig.active_configurations.kms_key_id != "")
+                    createReadReplicaParams['KmsKeyId'] = rdsConfig.active_configurations.kms_key_id
+                
+                custom_logging(`Creating read-replica of ${ rdsConfig.failover_configurations.identifier } in ${environmentConfig.active_region}`);
+                await createReadReplica(activeRdsClient, createReadReplicaParams);
+                custom_logging(`Getting ${ rdsConfig.active_configurations.proxy_name } details in ${environmentConfig.active_region}`);
+
+
                 custom_logging(`Promoting ${environmentConfig.active_region}'s ${rdsConfig.active_configurations.identifier} to primary`);
                 let promoteFailoverParams = {
                     DBInstanceIdentifier: rdsConfig.active_configurations.identifier
@@ -263,9 +283,7 @@ const processRds = async (environmentConfig) => {
                 await promoteReadReplica(activeRdsClient, promoteFailoverParams);
                 await waitForReplicaPromotionComplete(activeRdsClient, rdsConfig.active_configurations.identifier);
                 
-                dbInstanceDetails = await describeDBInstances(activeRdsClient, rdsConfig.active_configurations.identifier);
-                const { Account: accountId } = await sts.getCallerIdentity({}).promise();
-                
+                dbInstanceDetails = await describeDBInstances(activeRdsClient, rdsConfig.active_configurations.identifier);                
                 custom_logging(`Getting ${rdsConfig.active_configurations.proxy_name} details in ${environmentConfig.active_region}`);
                 let describeProxyParams = {
                     DBProxyName: rdsConfig.active_configurations.proxy_name,
