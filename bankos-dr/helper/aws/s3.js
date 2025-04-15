@@ -35,11 +35,11 @@ const syncS3Buckets = async (s3, sourceRegion, sourceBucket, targetRegion, targe
     return;
   }
   
-  // const sourceS3Client = new S3Client({ region: sourceRegion });
-  // const targetS3Client = new S3Client({ region: targetRegion });
+  const sourceS3Client = new S3Client({ region: sourceRegion, credentials: fromEnv() });
+  const targetS3Client = new S3Client({ region: targetRegion, credentials: fromEnv() });
   
-  // const sourceSync = new S3SyncClient({ client: sourceS3Client });
-  // const targetSync = new S3SyncClient({ client: targetS3Client });
+  const sourceSync = new S3SyncClient({ client: sourceS3Client, credentials: fromEnv() });
+  const targetSync = new S3SyncClient({ client: targetS3Client, credentials: fromEnv() });
 
   const { sync } = new S3SyncClient({ client: s3 });
   
