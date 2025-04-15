@@ -35,7 +35,7 @@ const updateArnRegion = (arn, sourceRegion, targetRegion) => {
   return arn;
 };
 
-const syncS3Buckets = async (s3Settings) => {
+const performS3BucketSync = async (s3Settings) => {
   custom_logging(chalk.green("Starting S3 Bucket Synchronization Process"));
 
   const sourceRegion = s3Settings.switching_to === "ACTIVE" ? s3Settings.failover_region : s3Settings.active_region;
@@ -128,6 +128,7 @@ const mainFunction = async () => {
   const processCurrentEnv = process.env.PROCESS_CURRENT_ENV === 'true';
 
   custom_logging(`Switching to ${chalk.green(config.switching_to)} environment`);
+  await performS3BucketSync(config);
   await copyS3EventNotifications(config, processCurrentEnv);
   custom_logging(chalk.green("Process completed"));
 };
