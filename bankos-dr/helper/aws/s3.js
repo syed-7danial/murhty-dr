@@ -41,8 +41,6 @@ const syncS3Buckets = async (s3, sourceRegion, sourceBucket, targetRegion, targe
   
   const sourceSync = new S3SyncClient({ client: sourceS3Client });
   const targetSync = new S3SyncClient({ client: targetS3Client });
-
-  const { sync } = new S3SyncClient({ client: s3 });
   
   await sourceSync.sync(
     `s3://${sourceBucket}`,
