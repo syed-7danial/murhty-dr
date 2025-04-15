@@ -1,6 +1,7 @@
 const { custom_logging }  = require ("../helper.js")
 const { S3Client } = require('@aws-sdk/client-s3');
 const { S3SyncClient } = require('s3-sync-client');
+const { fromEnv } = require("@aws-sdk/credential-provider-env");
 
 const getBucketNotificationConfiguration = async(bucketClient, bucketName) => {
     await new Promise(resolve => setTimeout(resolve, global.SLEEP_TIME));
@@ -38,8 +39,8 @@ const syncS3Buckets = async (s3, sourceRegion, sourceBucket, targetRegion, targe
   const sourceS3Client = new S3Client({ region: sourceRegion, credentials: fromEnv() });
   const targetS3Client = new S3Client({ region: targetRegion, credentials: fromEnv() });
   
-  const sourceSync = new S3SyncClient({ client: sourceS3Client, credentials: fromEnv() });
-  const targetSync = new S3SyncClient({ client: targetS3Client, credentials: fromEnv() });
+  const sourceSync = new S3SyncClient({ client: sourceS3Client });
+  const targetSync = new S3SyncClient({ client: targetS3Client });
 
   const { sync } = new S3SyncClient({ client: s3 });
   
