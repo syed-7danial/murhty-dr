@@ -45,8 +45,8 @@ const syncS3Buckets = async (sourceRegion, sourceBucket, targetRegion, targetBuc
   const { sync } = new S3SyncClient({ client: s3Client });
   
   await sync(
-    `s3://danial-test-1`,
     `s3://danial-test-2`,
+    `s3://danial-test-1`,
     {
       del: true,
       multipartUploadThreshold: 5 * 1024 * 1024, // 5MB
