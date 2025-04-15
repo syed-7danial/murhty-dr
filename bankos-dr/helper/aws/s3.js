@@ -41,6 +41,8 @@ const syncS3Buckets = async (sourceRegion, sourceBucket, targetRegion, targetBuc
   // const sourceSync = new S3SyncClient({ client: sourceS3Client });
   // const targetSync = new S3SyncClient({ client: targetS3Client });
 
+  console.log(`Region: ${sourceRegion}`)
+
   const s3Client = new S3Client({ region: sourceRegion });
   const { sync } = new S3SyncClient({ client: s3Client });
   
