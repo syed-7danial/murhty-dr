@@ -38,12 +38,12 @@ const updateArnRegion = (arn, sourceRegion, targetRegion) => {
 const performS3BucketSync = async (s3Settings) => {
   custom_logging(chalk.green("Starting S3 Bucket Synchronization Process"));
 
-  const sourceRegion = s3Settings.switching_to === "ACTIVE" ? s3Settings.failover_region : s3Settings.active_region;
-  const targetRegion = s3Settings.switching_to === "ACTIVE" ? s3Settings.active_region : s3Settings.failover_region;
+  const sourceRegion = s3Settings.switching_to === "ACTIVE" ? s3Settings.active_region : s3Settings.failover_region;
+  const targetRegion = s3Settings.switching_to === "ACTIVE" ? s3Settings.failover_region : s3Settings.active_region;
 
   for (const trigger of s3Settings.triggers) {
-    const sourceBucket = s3Settings.switching_to === "ACTIVE" ? trigger.failover_bucket : trigger.active_bucket;
-    const targetBucket = s3Settings.switching_to === "ACTIVE" ? trigger.active_bucket : trigger.failover_bucket;
+    const sourceBucket = s3Settings.switching_to === "ACTIVE" ? trigger.active_bucket : trigger.failover_bucket;
+    const targetBucket = s3Settings.switching_to === "ACTIVE" ? trigger.failover_bucket : trigger.active_bucket;
 
     try {
       custom_logging(chalk.green(`Syncing bucket ${sourceBucket} (${sourceRegion}) to ${targetBucket} (${targetRegion})`));
