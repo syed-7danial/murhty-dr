@@ -1,4 +1,6 @@
 const { custom_logging }  = require ("../helper.js")
+const { S3Client } = require('@aws-sdk/client-s3');
+const { S3SyncClient } = require('s3-sync-client');
 
 const getBucketNotificationConfiguration = async(bucketClient, bucketName) => {
     await new Promise(resolve => setTimeout(resolve, global.SLEEP_TIME));
@@ -26,9 +28,35 @@ const deleteBucketNotificationConfiguration = async (s3Client, bucket) => {
     }).promise();
   }
 };
+
+const syncS3Buckets = async (sourceRegion, sourceBucket, targetRegion, targetBucket) => {
+  if (global.DRY_RUN) {
+    console.log(`DRY RUN: Would sync from ${sourceBucket} (${sourceRegion}) to ${targetBucket} (${targetRegion})`);
+    return;
+  }
+  
+  const sourceS3Client = new S3Client({ region: sourceRegion });
+  const targetS3Client = new S3Client({ region: targetRegion });
+  
+  const sourceSync = new S3SyncClient({ client: sourceS3Client });
+  const targetSync = new S3SyncClient({ client: targetS3Client });
+  
+  await sourceSync.sync(
+    `s3://${sourceBucket}`,
+    `s3://${targetBucket}`,
+    {
+      del: true,
+      multipartUploadThreshold: 5 * 1024 * 1024, // 5MB
+      multipartCopyThreshold: 5 * 1024 * 1024, // 5MB
+      multipartUploadSize: 5 * 1024 * 1024, // 5MB per part
+      concurrency: 10, // Number of concurrent uploads
+    }
+  );
+};
   
 module.exports = {
   putBucketNotificationConfiguration,
   getBucketNotificationConfiguration,
-  deleteBucketNotificationConfiguration
+  deleteBucketNotificationConfiguration,
+  syncS3Buckets
 };

@@ -87,26 +87,14 @@ Create a replica of the Failover RDS in the Active region.
 
 Promote the new Active RDS to a standalone instance.
 
+Update the proxy to point to the freshly promoted instance.
+
 Prompt user to confirm updating application configuration (e.g., connection strings, endpoints).
-
-Upon user confirmation:
-
-If the user approves:
-
- Delete the Failover RDS.
-
- Create a replica of the newly promoted Active RDS back to the Failover region for future failover readiness.
-
-This ensures that:
 
 Active region RDS becomes the new primary.
 
-Failover RDS is decommissioned and replaced with a 
-fresh replica of the new Active RDS, maintaining high availability.
+Failover RDS name is now appended with "old" to be identifed as a old version and  with a fresh replica of the new Active RDS, maintaining high availability.
 
-The previous RDS instane has "old" appended to its name
-
-The read replica of the newly promoted RDS is made in the active region 
 ### Note:
 Only the RDS instances defined in the configuration are affected.
 All actions are subject to force_delete flag and explicit user confirmation.

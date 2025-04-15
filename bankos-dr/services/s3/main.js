@@ -5,7 +5,12 @@ const path = require('path');
 const { program } = require('commander');
 const chalk = require('chalk');
 const { custom_logging } = require('../../helper/helper.js');
-const { putBucketNotificationConfiguration,getBucketNotificationConfiguration,deleteBucketNotificationConfiguration } = require('../../helper/aws/s3.js');
+const { 
+  putBucketNotificationConfiguration,
+  getBucketNotificationConfiguration,
+  deleteBucketNotificationConfiguration,
+  syncS3Buckets 
+} = require('../../helper/aws/s3.js');
 
 const readFileAsync = promisify(fs.readFile);
 global.DRY_RUN = false;
@@ -28,6 +33,26 @@ const updateArnRegion = (arn, sourceRegion, targetRegion) => {
     return arn.replace(`:${sourceRegion}:`, `:${targetRegion}:`);
   }
   return arn;
+};
+
+const syncS3Buckets = async (s3Settings) => {
+  custom_logging(chalk.green("Starting S3 Bucket Synchronization Process"));
+
+  const sourceRegion = s3Settings.switching_to === "ACTIVE" ? s3Settings.failover_region : s3Settings.active_region;
+  const targetRegion = s3Settings.switching_to === "ACTIVE" ? s3Settings.active_region : s3Settings.failover_region;
+
+  for (const trigger of s3Settings.triggers) {
+    const sourceBucket = s3Settings.switching_to === "ACTIVE" ? trigger.failover_bucket : trigger.active_bucket;
+    const targetBucket = s3Settings.switching_to === "ACTIVE" ? trigger.active_bucket : trigger.failover_bucket;
+
+    try {
+      custom_logging(chalk.green(`Syncing bucket ${sourceBucket} (${sourceRegion}) to ${targetBucket} (${targetRegion})`));
+      await syncS3Buckets(sourceRegion, sourceBucket, targetRegion, targetBucket);
+      custom_logging(chalk.green(`Successfully synced ${sourceBucket} to ${targetBucket}`));
+    } catch (error) {
+      custom_logging(chalk.red(`Error syncing buckets ${sourceBucket} to ${targetBucket}: ${error.message}`));
+    }
+  }
 };
 
 const copyS3EventNotifications = async (s3Settings, processCurrentEnv) => {

@@ -282,6 +282,7 @@ const processRds = async (environmentConfig) => {
 
                 await promoteReadReplica(activeRdsClient, promoteFailoverParams);
                 await waitForReplicaPromotionComplete(activeRdsClient, rdsConfig.active_configurations.identifier);
+                custom_logging(chalk.yellow(`${rdsConfig.active_configurations.identifier} is promoted in ${environmentConfig.active_region}, Please update your DBs connection in applications to newly created Primary RDS in ${environmentConfig.active_region}`))
                 
                 dbInstanceDetails = await describeDBInstances(activeRdsClient, rdsConfig.active_configurations.identifier);                
                 custom_logging(`Getting ${rdsConfig.active_configurations.proxy_name} details in ${environmentConfig.active_region}`);
