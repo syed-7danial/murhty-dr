@@ -4,6 +4,7 @@ const { promisify } = require('util');
 const path = require('path');
 const { S3Client } = require('@aws-sdk/client-s3');
 const { S3SyncClient } = require('s3-sync-client');
+const { fromEnv } = require("@aws-sdk/credential-provider-env");
 const { program } = require('commander');
 const chalk = require('chalk');
 const { custom_logging } = require('../../helper/helper.js');
@@ -50,9 +51,12 @@ const performS3BucketSync = async (s3Settings) => {
     const sourceS3 = new S3Client({ region: sourceRegion, credentials: fromEnv() });
     const targetS3Client = new S3Client({ region: targetRegion, credentials: fromEnv() });
 
+    const sourceSync = new S3SyncClient({ client: sourceS3 });
+  // const targetSync = new S3SyncClient({ client: targetS3Client });
+
     try {
       custom_logging(chalk.green(`Syncing bucket ${sourceBucket} (${sourceRegion}) to ${targetBucket} (${targetRegion})`));
-      await syncS3Buckets(sourceS3, sourceRegion, sourceBucket, targetRegion, targetBucket);
+      await syncS3Buckets(sourceSync, sourceRegion, sourceBucket, targetRegion, targetBucket);
       custom_logging(chalk.green(`Successfully synced ${sourceBucket} to ${targetBucket}`));
     } catch (error) {
       custom_logging(chalk.red(`Error syncing buckets ${sourceBucket} to ${targetBucket}: ${error.message}`));
