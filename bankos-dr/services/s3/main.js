@@ -192,7 +192,7 @@ const mainFunction = async () => {
 };
 
 
-const s3Client1 = new S3Client({ region: "us-east-1" }); // Use either region
+const s3Client1 = new S3Client({ region: "us-east-2" }); // Use either region
 const { sync } = new S3SyncClient({ client: s3Client1 });
 
 (async () => {
