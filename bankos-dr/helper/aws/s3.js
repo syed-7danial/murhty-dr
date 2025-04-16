@@ -27,25 +27,6 @@ const deleteBucketNotificationConfiguration = async (s3Client, bucket) => {
   }
 };
 
-const syncS3Buckets = async (sourceS3, targetS3, sourceRegion, sourceBucket, targetRegion, targetBucket) => {
-  if (global.DRY_RUN) {
-    console.log(`DRY RUN: Would sync from ${sourceBucket} (${sourceRegion}) to ${targetBucket} (${targetRegion})`);
-    return;
-  }
-  
-  await targetS3.sync(
-    `s3://${sourceBucket}`,
-    `s3://${targetBucket}`,
-    {
-      del: true,
-      multipartUploadThreshold: 5 * 1024 * 1024, // 5MB
-      multipartCopyThreshold: 5 * 1024 * 1024, // 5MB
-      multipartUploadSize: 5 * 1024 * 1024, // 5MB per part
-      concurrency: 10, // Number of concurrent uploads
-    }
-  );
-};
-  
 module.exports = {
   putBucketNotificationConfiguration,
   getBucketNotificationConfiguration,
