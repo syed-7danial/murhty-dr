@@ -51,13 +51,11 @@ const performS3BucketSync = async (s3Settings) => {
       const primaryS3Client = new S3Client({
         region: primaryRegion,
         credentials: fromEnv(),
-        endpoint: `https://s3.${primaryRegion}.amazonaws.com`
-      });
+        });
       
       const secondaryS3Client = new S3Client({
         region: secondaryRegion,
         credentials: fromEnv(),
-        endpoint: `https://s3.${secondaryRegion}.amazonaws.com`
       });
 
       const { S3SyncClient } = require('s3-sync-client');
