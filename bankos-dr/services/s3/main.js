@@ -2,6 +2,8 @@ const AWS = require('aws-sdk');
 const fs = require('fs');
 const { promisify } = require('util');
 const path = require('path');
+const { S3Client } = require('@aws-sdk/client-s3');
+const { S3SyncClient } = require('s3-sync-client');
 const { program } = require('commander');
 const chalk = require('chalk');
 const { custom_logging } = require('../../helper/helper.js');
@@ -45,8 +47,8 @@ const performS3BucketSync = async (s3Settings) => {
     const sourceBucket = s3Settings.switching_to === "ACTIVE" ? trigger.active_bucket : trigger.failover_bucket;
     const targetBucket = s3Settings.switching_to === "ACTIVE" ? trigger.failover_bucket : trigger.active_bucket;
 
-    const sourceS3 = new AWS.S3({ region: sourceRegion });
-    const targetS3 = new AWS.S3({ region: targetRegion });
+    const sourceS3 = new S3Client({ region: sourceRegion, credentials: fromEnv() });
+    const targetS3Client = new S3Client({ region: targetRegion, credentials: fromEnv() });
 
     try {
       custom_logging(chalk.green(`Syncing bucket ${sourceBucket} (${sourceRegion}) to ${targetBucket} (${targetRegion})`));
