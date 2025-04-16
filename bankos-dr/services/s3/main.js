@@ -191,10 +191,6 @@ const mainFunction = async () => {
   custom_logging(chalk.green("Process completed"));
 };
 
-// sync-cross-region.js
-import { S3Client } from '@aws-sdk/client-s3';
-import { S3SyncClient, sync } from 's3-sync-client';
-
 const sourceClient = new S3Client({ region: 'us-east-1' });
 const destinationClient = new S3Client({ region: 'us-east-2' });
 
