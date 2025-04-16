@@ -191,13 +191,9 @@ const mainFunction = async () => {
   custom_logging(chalk.green("Process completed"));
 };
 
-const sourceClient = new S3Client({ region: 'us-east-1' });
-const destinationClient = new S3Client({ region: 'us-east-2' });
-
-
-const s3SyncClient = new S3SyncClient({ 
-  sourceClient, 
-  destinationClient 
+const s3SyncClient = new S3SyncClient({
+  sourceClient: new S3Client({ region: 'us-east-1' }),
+  destinationClient: new S3Client({ region: 'us-east-2' })
 });
 
 (async () => {
