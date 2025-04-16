@@ -7,6 +7,7 @@ const { S3SyncClient } = require('s3-sync-client');
 const { fromEnv } = require("@aws-sdk/credential-provider-env");
 const { program } = require('commander');
 const chalk = require('chalk');
+const s3p = require('s3p');
 const { custom_logging } = require('../../helper/helper.js');
 const { 
   putBucketNotificationConfiguration,
@@ -191,18 +192,15 @@ const mainFunction = async () => {
   custom_logging(chalk.green("Process completed"));
 };
 
-
-const s3Client1 = new S3Client({ region: "us-east-2" }); // Use either region
-const { sync } = new S3SyncClient({ client: s3Client1 });
-
-(async () => {
-  try {
-    await sync('s3://danial-test-1/', 's3://danial-test-2/');
-    console.log('✅ Sync done');
-  } catch (err) {
-    console.error('❌ Sync error:', err);
-  }
-})();
+s3p.sync({
+  src: 's3://danial-test-1',
+  dest: 's3://danial-test-2',
+  // Additional options can be specified here
+}).then(() => {
+  console.log('Synchronization complete.');
+}).catch((error) => {
+  console.error('An error occurred during synchronization:', error);
+});
 
 mainFunction().catch(error => {
   custom_logging(chalk.red("Error: ") + error.message);
