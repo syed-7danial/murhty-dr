@@ -1,6 +1,7 @@
 const AWS = require('aws-sdk');
 const fs = require('fs');
 const { promisify } = require('util');
+const { spawn } = require('child_process');
 const path = require('path');
 // const { S3Client } = require('@aws-sdk/client-s3');
 // const { S3SyncClient } = require('s3-sync-client');
