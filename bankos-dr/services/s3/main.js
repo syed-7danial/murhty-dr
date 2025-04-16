@@ -191,6 +191,36 @@ const mainFunction = async () => {
   custom_logging(chalk.green("Process completed"));
 };
 
+// sync-cross-region.js
+import { S3Client } from '@aws-sdk/client-s3';
+import { S3SyncClient, sync } from 's3-sync-client';
+
+const sourceClient = new S3Client({ region: 'us-east-1' });
+const destinationClient = new S3Client({ region: 'us-east-2' });
+
+const s3SyncClient = new S3SyncClient({ client: destinationClient }); // used internally, but destination client is enough
+
+(async () => {
+  try {
+    await sync(
+      {
+        client: sourceClient,
+        bucket: 'source-bucket-name',
+        prefix: '', // optional
+      },
+      {
+        client: destinationClient,
+        bucket: 'destination-bucket-name',
+        prefix: '', // optional
+      }
+    );
+
+    console.log('Cross-region bucket sync complete!');
+  } catch (err) {
+    console.error('Error during sync:', err);
+  }
+})();
+
 mainFunction().catch(error => {
   custom_logging(chalk.red("Error: ") + error.message);
   process.exit(1);
