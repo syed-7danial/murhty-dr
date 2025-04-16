@@ -21,6 +21,13 @@ pipeline {
                 npm install
                 '''
             }
+            
+        }
+        stage('Debug') {
+            steps {
+                sh 'which aws || echo "AWS CLI not found"'
+                sh 'echo $PATH'
+            }
         }
         stage('Load and Process Configuration') {
             steps {
