@@ -62,9 +62,6 @@ const syncS3Buckets = async (sourceRegion, targetRegion, sourceBucket, targetBuc
       args.push('--delete');
     }
 
-    // Add concurrency option
-    args.push('--max-concurrent-requests', maxConcurrency.toString());
-
     custom_logging(`Starting S3 sync: aws ${args.join(' ')}`);
 
     // Create environment with AWS credentials
