@@ -49,14 +49,14 @@ const performS3BucketSync = async (s3Settings) => {
     const targetBucket = s3Settings.switching_to === "ACTIVE" ? trigger.failover_bucket : trigger.active_bucket;
 
     const sourceS3 = new S3Client({ region: sourceRegion, credentials: fromEnv() });
-    const targetS3Client = new S3Client({ region: targetRegion, credentials: fromEnv() });
+    const targetS3 = new S3Client({ region: targetRegion, credentials: fromEnv() });
 
     const sourceSync = new S3SyncClient({ client: sourceS3 });
-  // const targetSync = new S3SyncClient({ client: targetS3Client });
+    const targetSync = new S3SyncClient({ client: targetS3 });
 
     try {
       custom_logging(chalk.green(`Syncing bucket ${sourceBucket} (${sourceRegion}) to ${targetBucket} (${targetRegion})`));
-      await syncS3Buckets(sourceSync, sourceRegion, sourceBucket, targetRegion, targetBucket);
+      await syncS3Buckets(sourceSync, targetSync, sourceRegion, sourceBucket, targetRegion, targetBucket);
       custom_logging(chalk.green(`Successfully synced ${sourceBucket} to ${targetBucket}`));
     } catch (error) {
       custom_logging(chalk.red(`Error syncing buckets ${sourceBucket} to ${targetBucket}: ${error.message}`));

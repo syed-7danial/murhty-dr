@@ -27,13 +27,13 @@ const deleteBucketNotificationConfiguration = async (s3Client, bucket) => {
   }
 };
 
-const syncS3Buckets = async (s3, sourceRegion, sourceBucket, targetRegion, targetBucket) => {
+const syncS3Buckets = async (sourceS3, targetS3, sourceRegion, sourceBucket, targetRegion, targetBucket) => {
   if (global.DRY_RUN) {
     console.log(`DRY RUN: Would sync from ${sourceBucket} (${sourceRegion}) to ${targetBucket} (${targetRegion})`);
     return;
   }
   
-  await s3.sync(
+  await sourceS3.sync(
     `s3://${sourceBucket}`,
     `s3://${targetBucket}`,
     {
