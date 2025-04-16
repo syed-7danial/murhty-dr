@@ -192,16 +192,22 @@ const mainFunction = async () => {
   custom_logging(chalk.green("Process completed"));
 };
 
-s3p.sync({
-  bucket: 'danial-test-1',
-  toBucket: 'danial-test-2',
-  region: 'us-east-2'
-  // Additional options can be specified here
-}).then(() => {
-  console.log('Synchronization complete.');
-}).catch((error) => {
-  console.error('An error occurred during synchronization:', error);
-});
+const sourceS3 = new S3Client({ region: 'us-east-1' }); // Source region
+const destinationS3 = new S3Client({ region: 'us-east-2' }); // Destination region
+
+const syncClient = new S3SyncClient({ client: destinationS3 });
+
+async function syncBuckets() {
+  await syncClient.sync(
+    `s3://danial-test-1/`,
+    `s3://danial-test-2/`,
+    {
+      client: sourceS3,
+    }
+  );
+}
+
+syncBuckets();
 
 mainFunction().catch(error => {
   custom_logging(chalk.red("Error: ") + error.message);
