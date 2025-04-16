@@ -194,7 +194,7 @@ const mainFunction = async () => {
 
 s3p.sync({
   src: 's3://danial-test-1',
-  dest: 's3://danial-test-2',
+  toBucket: 's3://danial-test-2',
   // Additional options can be specified here
 }).then(() => {
   console.log('Synchronization complete.');
