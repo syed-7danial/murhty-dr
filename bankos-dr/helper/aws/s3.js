@@ -33,7 +33,7 @@ const syncS3Buckets = async (sourceS3, targetS3, sourceRegion, sourceBucket, tar
     return;
   }
   
-  await sourceS3.sync(
+  await targetS3.sync(
     `s3://${sourceBucket}`,
     `s3://${targetBucket}`,
     {
