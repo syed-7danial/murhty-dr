@@ -40,20 +40,14 @@ const updateArnRegion = (arn, sourceRegion, targetRegion) => {
 const performS3BucketSync = async (s3Settings) => {
   custom_logging(chalk.green("Starting S3 Bucket Sync Process"));
 
-  // Determine the primary and secondary regions based on switching_to value
-  // Primary = the environment we are switching TO
-  // Secondary = the environment we are switching FROM
   const primaryRegion = s3Settings.switching_to === "ACTIVE" ? s3Settings.active_region : s3Settings.failover_region;
   const secondaryRegion = s3Settings.switching_to === "ACTIVE" ? s3Settings.failover_region : s3Settings.active_region;
 
-  // Process each bucket pair
   for (const trigger of s3Settings.triggers) {
-    // Determine the primary and secondary buckets
     const primaryBucket = s3Settings.switching_to === "ACTIVE" ? trigger.active_bucket : trigger.failover_bucket;
     const secondaryBucket = s3Settings.switching_to === "ACTIVE" ? trigger.failover_bucket : trigger.active_bucket;
 
     try {
-      // Create S3 clients with explicit regional configuration
       const primaryS3Client = new S3Client({
         region: primaryRegion,
         credentials: fromEnv(),
@@ -66,22 +60,17 @@ const performS3BucketSync = async (s3Settings) => {
         endpoint: `https://s3.${secondaryRegion}.amazonaws.com`
       });
 
-      // Create S3SyncClient instances
       const { S3SyncClient } = require('s3-sync-client');
       
-      // Sync options
       const syncOptions = {
-        del: false, // Don't delete files - safer for bidirectional sync
+        del: false,
         dryRun: global.DRY_RUN,
         commandInput: {
           ACL: 'bucket-owner-full-control'
         }
       };
 
-      // Set up bidirectional sync based on switching_to parameter
       if (s3Settings.switching_to === "FAILOVER") {
-        // When switching to FAILOVER, sync FROM failover TO active
-        // This ensures any new content in failover gets synced to active
         custom_logging(chalk.yellow(`Setting up sync FROM ${primaryBucket} (${primaryRegion}) TO ${secondaryBucket} (${secondaryRegion})`));
         
         const failoverToActiveSyncClient = new S3SyncClient({ client: primaryS3Client });
@@ -98,8 +87,6 @@ const performS3BucketSync = async (s3Settings) => {
           custom_logging(chalk.blue(`[DRY RUN] Would sync FROM ${primaryBucket} TO ${secondaryBucket}`));
         }
       } else if (s3Settings.switching_to === "ACTIVE") {
-        // When switching to ACTIVE, sync FROM active TO failover
-        // This ensures any new content in active gets synced to failover
         custom_logging(chalk.yellow(`Setting up sync FROM ${primaryBucket} (${primaryRegion}) TO ${secondaryBucket} (${secondaryRegion})`));
         
         const activeToFailoverSyncClient = new S3SyncClient({ client: primaryS3Client });
