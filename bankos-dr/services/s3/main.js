@@ -193,8 +193,9 @@ const mainFunction = async () => {
 };
 
 s3p.sync({
-  src: 's3://danial-test-1',
+  bucket: 's3://danial-test-1',
   toBucket: 's3://danial-test-2',
+  region: 'us-east-1'
   // Additional options can be specified here
 }).then(() => {
   console.log('Synchronization complete.');
