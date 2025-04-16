@@ -12,7 +12,6 @@ const {
   putBucketNotificationConfiguration,
   getBucketNotificationConfiguration,
   deleteBucketNotificationConfiguration,
-  syncS3Buckets 
 } = require('../../helper/aws/s3.js');
 
 const readFileAsync = promisify(fs.readFile);

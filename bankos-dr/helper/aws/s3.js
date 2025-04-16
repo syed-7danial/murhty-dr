@@ -30,6 +30,5 @@ const deleteBucketNotificationConfiguration = async (s3Client, bucket) => {
 module.exports = {
   putBucketNotificationConfiguration,
   getBucketNotificationConfiguration,
-  deleteBucketNotificationConfiguration,
-  syncS3Buckets
-};
+  deleteBucketNotificationConfiguration
+ };
