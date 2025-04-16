@@ -6,9 +6,14 @@
             "active_configurations": {
                 "identifier": "database-1",
                 "kms_key_id": "40a25d87-c7cd-4162-b7b8-f4fef85b53a5",
-                "subnet_group_name":"default-vpc-02f6f922e607860ae",
-                "security_group_ids":["sg-03b66c0f312786cea"],
-                "proxy_name": "database-1"
+                "subnet_group_name":"default-vpc-0e8e44ad8aa9d1c32",
+                "security_group_ids":["sg-01f73abdd8b06d85a"],
+                "proxy_name": "database-1",
+                "replica_configuration" : [
+                    {
+                        "identifier": "database-1-rr"
+                    }
+                ]
             },
             "failover_configurations": {
                 "identifier": "database-1",
