@@ -345,38 +345,26 @@ const processRds = async (environmentConfig) => {
                         const failoverReplicaId = replicaConfig.identifier;
                         
                         try {
-                            let replicaExists = false;
-                            try {
-                                await checkIfRdsExists(failoverRdsClient, { DBInstanceIdentifier: failoverReplicaId });
-                                replicaExists = true;
-                            } catch (err) {
-                                if (err.code !== 'DBInstanceNotFound') throw err;
+                            custom_logging(chalk.green(`Creating replica ${failoverReplicaId} in ${environmentConfig.failover_region}`));
+                            
+                            const dbInstanceDetails = await describeDBInstances(activeRdsClient, rdsConfig.active_configurations.identifier);
+                            
+                            const createReplicaParams = {
+                                DBInstanceIdentifier: rdsConfig.failover_configurations.identifier,
+                                SourceDBInstanceIdentifier: `arn:aws:rds:${environmentConfig.active_region}:${accountId}:db:${rdsConfig.active_configurations.identifier}`,
+                                DBInstanceClass: dbInstanceDetails.DBInstances[0].DBInstanceClass,
+                                DBSubnetGroupName: rdsConfig.failover_configurations.subnet_group_name,
+                                VpcSecurityGroupIds: rdsConfig.failover_configurations.security_group_ids
+                            };
+                            
+                            if (rdsConfig.failover_configurations.hasOwnProperty("kms_key_id") && 
+                                rdsConfig.failover_configurations.kms_key_id !== "") {
+                                createReplicaParams['KmsKeyId'] = rdsConfig.failover_configurations.kms_key_id;
                             }
                             
-                            if (replicaExists) {
-                                custom_logging(chalk.yellow(`Replica ${failoverReplicaId} already exists in ${environmentConfig.failover_region}. Skipping creation.`));
-                            } else {
-                                custom_logging(chalk.green(`Creating replica ${failoverReplicaId} in ${environmentConfig.failover_region}`));
-                                
-                                const dbInstanceDetails = await describeDBInstances(activeRdsClient, rdsConfig.active_configurations.identifier);
-                                
-                                const createReplicaParams = {
-                                    DBInstanceIdentifier: rdsConfig.failover_configurations.identifier,
-                                    SourceDBInstanceIdentifier: `arn:aws:rds:${environmentConfig.active_region}:${accountId}:db:${rdsConfig.active_configurations.identifier}`,
-                                    DBInstanceClass: dbInstanceDetails.DBInstances[0].DBInstanceClass,
-                                    DBSubnetGroupName: rdsConfig.failover_configurations.subnet_group_name,
-                                    VpcSecurityGroupIds: rdsConfig.failover_configurations.security_group_ids
-                                };
-                                
-                                if (rdsConfig.failover_configurations.hasOwnProperty("kms_key_id") && 
-                                    rdsConfig.failover_configurations.kms_key_id !== "") {
-                                    createReplicaParams['KmsKeyId'] = rdsConfig.failover_configurations.kms_key_id;
-                                }
-                                
-                                await createReadReplica(failoverRdsClient, createReplicaParams);
-                                await waitForDbInstanceAvailable(failoverRdsClient, failoverReplicaId);
-                                custom_logging(chalk.green(`Successfully created replica ${failoverReplicaId} in ${environmentConfig.failover_region}`));
-                            }
+                            await createReadReplica(failoverRdsClient, createReplicaParams);
+                            await waitForDbInstanceAvailable(failoverRdsClient, failoverReplicaId);
+                            custom_logging(chalk.green(`Successfully created replica ${failoverReplicaId} in ${environmentConfig.failover_region}`));
                         } catch (error) {
                             custom_logging(chalk.red(`Error creating replica ${failoverReplicaId} in failover region: ${error.message}`));
                             throw error;
