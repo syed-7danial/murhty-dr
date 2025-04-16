@@ -53,41 +53,95 @@ const performS3BucketSync = async (s3Settings) => {
     try {
       custom_logging(chalk.yellow(`Syncing from ${sourceBucket} (${sourceRegion}) to ${targetBucket} (${targetRegion})`));
       
-      // Create S3 clients for source and target regions
+      // IMPORTANT: Create the source client with the correct region for the source bucket
       const sourceS3Client = new S3Client({
         region: sourceRegion,
         credentials: fromEnv(),
+        forcePathStyle: true // This can sometimes help with endpoint issues
       });
       
+      // Create target client with the correct region for the target bucket
       const targetS3Client = new S3Client({
         region: targetRegion,
         credentials: fromEnv(),
+        forcePathStyle: true
       });
-      
-      // Create sync clients
-      const { sync } = new S3SyncClient({ client: sourceS3Client });
       
       if (global.DRY_RUN) {
         custom_logging(chalk.blue(`[DRY RUN] Would sync s3://${sourceBucket} to s3://${targetBucket}`));
       } else {
-        // Options for sync
+        // Use a different approach - download and upload instead of direct sync
+        // First, list all objects in the source bucket
+        custom_logging(chalk.blue(`Listing objects in s3://${sourceBucket}`));
+        
+        // Create the S3SyncClient with proper configuration
+        const { S3SyncClient } = require('s3-sync-client');
+        const syncClient = new S3SyncClient({ 
+          client: sourceS3Client,
+          // Add extra options for troubleshooting
+          maxAttempts: 5,
+          debug: true
+        });
+        
+        // Configure sync options
         const syncOptions = {
           targetClient: targetS3Client,
-          del: true, // Delete files at destination that don't exist in source
+          del: true,
           dryRun: false,
-          commandInput: {
-            ACL: 'bucket-owner-full-control' // Set ACL for copied objects
+          // Use regional endpoints explicitly
+          commandInput: (command) => {
+            return {
+              ...command,
+              ACL: 'bucket-owner-full-control'
+            };
           }
         };
         
-        // Perform the sync
         custom_logging(chalk.blue(`Starting sync from s3://${sourceBucket} to s3://${targetBucket}`));
-        const result = await sync(`s3://${sourceBucket}`, `s3://${targetBucket}`, syncOptions);
         
-        custom_logging(chalk.green(`Sync completed: ${result.copied} copied, ${result.deleted} deleted, ${result.skipped} skipped`));
+        // Handle sync
+        try {
+          const result = await syncClient.sync(`s3://${sourceBucket}`, `s3://${targetBucket}`, syncOptions);
+          custom_logging(chalk.green(`Sync completed: ${result.copied} copied, ${result.deleted} deleted, ${result.skipped} skipped`));
+        } catch (syncError) {
+          // Try alternative approach with AWS SDK if s3-sync-client fails
+          custom_logging(chalk.yellow(`Sync client failed. Trying alternative approach: ${syncError.message}`));
+          
+          // Use the AWS SDK directly for manual sync
+          const sourceS3 = new AWS.S3({ region: sourceRegion });
+          const targetS3 = new AWS.S3({ region: targetRegion });
+          
+          // List all objects in source bucket
+          const listParams = { Bucket: sourceBucket };
+          const listedObjects = await sourceS3.listObjectsV2(listParams).promise();
+          
+          if (listedObjects.Contents && listedObjects.Contents.length > 0) {
+            custom_logging(chalk.blue(`Found ${listedObjects.Contents.length} objects to copy`));
+            
+            // Copy each object
+            for (const object of listedObjects.Contents) {
+              const copyParams = {
+                Bucket: targetBucket,
+                CopySource: `/${sourceBucket}/${object.Key}`,
+                Key: object.Key,
+                ACL: 'bucket-owner-full-control'
+              };
+              
+              await targetS3.copyObject(copyParams).promise();
+              custom_logging(`Copied: ${object.Key}`);
+            }
+            
+            custom_logging(chalk.green(`Manual sync completed: ${listedObjects.Contents.length} objects copied`));
+          } else {
+            custom_logging(chalk.yellow('No objects found in source bucket'));
+          }
+        }
       }
     } catch (error) {
       custom_logging(chalk.red(`Error syncing bucket ${sourceBucket} to ${targetBucket}: ${error.message}`));
+      if (error.stack) {
+        custom_logging(chalk.red(`Stack trace: ${error.stack}`));
+      }
       throw error; // Re-throw to handle in the main function
     }
   }
