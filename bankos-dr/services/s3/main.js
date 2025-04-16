@@ -194,24 +194,19 @@ const mainFunction = async () => {
 const sourceClient = new S3Client({ region: 'us-east-1' });
 const destinationClient = new S3Client({ region: 'us-east-2' });
 
-const s3SyncClient = new S3SyncClient({ client: destinationClient }); // used internally, but destination client is enough
+
+const s3SyncClient = new S3SyncClient({ 
+  sourceClient, 
+  destinationClient 
+});
 
 (async () => {
   try {
     await s3SyncClient.sync(
-      {
-        client: sourceClient,
-        bucket: 'danial-test-1',
-        prefix: '', // optional
-      },
-      {
-        client: destinationClient,
-        bucket: 'danial-test-2',
-        prefix: '', // optional
-      }
+      's3://danial-test-1/',
+      's3://danial-test-2/'
     );
-
-    console.log('Cross-region bucket sync complete!');
+    console.log('S3-to-S3 sync complete!');
   } catch (err) {
     console.error('Error during sync:', err);
   }
