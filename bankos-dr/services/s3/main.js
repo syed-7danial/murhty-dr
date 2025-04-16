@@ -54,10 +54,10 @@ const syncS3BucketContents = async (s3Settings) => {
 
     try {
       // Get object counts before sync for reporting
-      const sourceObjectCount = await getObjectsCount(sourceS3, sourceBucket);
-      const targetObjectCount = await getObjectsCount(targetS3, targetBucket);
+      // const sourceObjectCount = await getObjectsCount(sourceS3, sourceBucket);
+      // const targetObjectCount = await getObjectsCount(targetS3, targetBucket);
       
-      custom_logging(chalk.green(`Syncing contents from ${sourceBucket} (${sourceObjectCount} objects) in ${sourceRegion} to ${targetBucket} (${targetObjectCount} objects) in ${targetRegion}`));
+      custom_logging(chalk.green(`Syncing contents from ${sourceBucket} in ${sourceRegion} to ${targetBucket} in ${targetRegion}`));
       
       const syncOptions = {
         prefix: '', 
