@@ -348,6 +348,7 @@ const processRds = async (environmentConfig) => {
                             custom_logging(chalk.green(`Creating replica ${failoverReplicaId} in ${environmentConfig.failover_region}`));
                             
                             const dbInstanceDetails = await describeDBInstances(activeRdsClient, rdsConfig.active_configurations.identifier);
+                            const { Account: accountId} = await sts.getCallerIdentity({}).promise();
                             
                             const createReplicaParams = {
                                 DBInstanceIdentifier: rdsConfig.failover_configurations.identifier,
