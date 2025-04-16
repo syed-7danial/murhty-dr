@@ -198,7 +198,7 @@ const s3SyncClient = new S3SyncClient({ client: destinationClient }); // used in
 
 (async () => {
   try {
-    await sync(
+    await s3SyncClient.sync(
       {
         client: sourceClient,
         bucket: 'danial-test-1',
