@@ -40,63 +40,90 @@ const updateArnRegion = (arn, sourceRegion, targetRegion) => {
 const performS3BucketSync = async (s3Settings) => {
   custom_logging(chalk.green("Starting S3 Bucket Sync Process"));
 
-  // Determine source and target regions based on switching_to value
-  const sourceRegion = s3Settings.switching_to === "ACTIVE" ? s3Settings.failover_region : s3Settings.active_region;
-  const targetRegion = s3Settings.switching_to === "ACTIVE" ? s3Settings.active_region : s3Settings.failover_region;
+  // Determine the primary and secondary regions based on switching_to value
+  // Primary = the environment we are switching TO
+  // Secondary = the environment we are switching FROM
+  const primaryRegion = s3Settings.switching_to === "ACTIVE" ? s3Settings.active_region : s3Settings.failover_region;
+  const secondaryRegion = s3Settings.switching_to === "ACTIVE" ? s3Settings.failover_region : s3Settings.active_region;
 
-  // For each trigger/bucket pair in the configuration
+  // Process each bucket pair
   for (const trigger of s3Settings.triggers) {
-    // Determine source and target buckets based on switching_to value
-    const sourceBucket = s3Settings.switching_to === "ACTIVE" ? trigger.failover_bucket : trigger.active_bucket;
-    const targetBucket = s3Settings.switching_to === "ACTIVE" ? trigger.active_bucket : trigger.failover_bucket;
+    // Determine the primary and secondary buckets
+    const primaryBucket = s3Settings.switching_to === "ACTIVE" ? trigger.active_bucket : trigger.failover_bucket;
+    const secondaryBucket = s3Settings.switching_to === "ACTIVE" ? trigger.failover_bucket : trigger.active_bucket;
 
     try {
-      custom_logging(chalk.yellow(`Syncing from ${sourceBucket} (${sourceRegion}) to ${targetBucket} (${targetRegion})`));
-      
-      // Create S3 clients for source and target regions with specific endpoints
-      const sourceS3Client = new S3Client({
-        region: sourceRegion,
+      // Create S3 clients with explicit regional configuration
+      const primaryS3Client = new S3Client({
+        region: primaryRegion,
         credentials: fromEnv(),
-        endpoint: `https://s3.${sourceRegion}.amazonaws.com`,
-        forcePathStyle: true
+        endpoint: `https://s3.${primaryRegion}.amazonaws.com`
       });
       
-      const targetS3Client = new S3Client({
-        region: targetRegion,
+      const secondaryS3Client = new S3Client({
+        region: secondaryRegion,
         credentials: fromEnv(),
-        endpoint: `https://s3.${targetRegion}.amazonaws.com`,
-        forcePathStyle: true
+        endpoint: `https://s3.${secondaryRegion}.amazonaws.com`
       });
+
+      // Create S3SyncClient instances
+      const { S3SyncClient } = require('s3-sync-client');
       
-      if (global.DRY_RUN) {
-        custom_logging(chalk.blue(`[DRY RUN] Would sync s3://${sourceBucket} to s3://${targetBucket}`));
+      // Sync options
+      const syncOptions = {
+        del: false, // Don't delete files - safer for bidirectional sync
+        dryRun: global.DRY_RUN,
+        commandInput: {
+          ACL: 'bucket-owner-full-control'
+        }
+      };
+
+      // Set up bidirectional sync based on switching_to parameter
+      if (s3Settings.switching_to === "FAILOVER") {
+        // When switching to FAILOVER, sync FROM failover TO active
+        // This ensures any new content in failover gets synced to active
+        custom_logging(chalk.yellow(`Setting up sync FROM ${primaryBucket} (${primaryRegion}) TO ${secondaryBucket} (${secondaryRegion})`));
+        
+        const failoverToActiveSyncClient = new S3SyncClient({ client: primaryS3Client });
+        
+        if (!global.DRY_RUN) {
+          custom_logging(chalk.blue(`Starting sync FROM ${primaryBucket} TO ${secondaryBucket}`));
+          const result = await failoverToActiveSyncClient.sync(
+            `s3://${primaryBucket}`, 
+            `s3://${secondaryBucket}`, 
+            { ...syncOptions, targetClient: secondaryS3Client }
+          );
+          custom_logging(chalk.green(`Sync completed: ${result.copied} copied, ${result.skipped} skipped`));
+        } else {
+          custom_logging(chalk.blue(`[DRY RUN] Would sync FROM ${primaryBucket} TO ${secondaryBucket}`));
+        }
+      } else if (s3Settings.switching_to === "ACTIVE") {
+        // When switching to ACTIVE, sync FROM active TO failover
+        // This ensures any new content in active gets synced to failover
+        custom_logging(chalk.yellow(`Setting up sync FROM ${primaryBucket} (${primaryRegion}) TO ${secondaryBucket} (${secondaryRegion})`));
+        
+        const activeToFailoverSyncClient = new S3SyncClient({ client: primaryS3Client });
+        
+        if (!global.DRY_RUN) {
+          custom_logging(chalk.blue(`Starting sync FROM ${primaryBucket} TO ${secondaryBucket}`));
+          const result = await activeToFailoverSyncClient.sync(
+            `s3://${primaryBucket}`, 
+            `s3://${secondaryBucket}`, 
+            { ...syncOptions, targetClient: secondaryS3Client }
+          );
+          custom_logging(chalk.green(`Sync completed: ${result.copied} copied, ${result.skipped} skipped`));
+        } else {
+          custom_logging(chalk.blue(`[DRY RUN] Would sync FROM ${primaryBucket} TO ${secondaryBucket}`));
+        }
       } else {
-        // Create sync client with explicit regional configuration
-        const { S3SyncClient } = require('s3-sync-client');
-        const syncClient = new S3SyncClient({ 
-          client: sourceS3Client
-        });
-        
-        // Configure sync options
-        const syncOptions = {
-          targetClient: targetS3Client,
-          del: true,
-          dryRun: false,
-          commandInput: {
-            ACL: 'bucket-owner-full-control'
-          }
-        };
-        
-        custom_logging(chalk.blue(`Starting sync from s3://${sourceBucket} to s3://${targetBucket}`));
-        const result = await syncClient.sync(`s3://${sourceBucket}`, `s3://${targetBucket}`, syncOptions);
-        custom_logging(chalk.green(`Sync completed: ${result.copied} copied, ${result.deleted} deleted, ${result.skipped} skipped`));
+        custom_logging(chalk.red(`Unknown switching_to value: ${s3Settings.switching_to}`));
       }
     } catch (error) {
-      custom_logging(chalk.red(`Error syncing bucket ${sourceBucket} to ${targetBucket}: ${error.message}`));
+      custom_logging(chalk.red(`Error in bidirectional sync for buckets ${primaryBucket} and ${secondaryBucket}: ${error.message}`));
       if (error.stack) {
         custom_logging(chalk.red(`Stack trace: ${error.stack}`));
       }
-      throw error; // Re-throw to handle in the main function
+      throw error;
     }
   }
   
