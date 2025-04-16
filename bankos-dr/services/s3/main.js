@@ -191,20 +191,15 @@ const mainFunction = async () => {
   custom_logging(chalk.green("Process completed"));
 };
 
-const s3SyncClient = new S3SyncClient({
-  sourceClient: new S3Client({ region: 'us-east-1' }),
-  destinationClient: new S3Client({ region: 'us-east-2' })
-});
+const s3Client1 = new S3Client({ region: 'us-east-1' }); // Use either region
+const { sync } = new S3SyncClient({ client: s3Client1 });
 
 (async () => {
   try {
-    await s3SyncClient.sync(
-      's3://danial-test-1/',
-      's3://danial-test-2/'
-    );
-    console.log('S3-to-S3 sync complete!');
+    await sync('s3://danial-test-1/', 's3://danial-test-2/');
+    console.log('✅ Sync done');
   } catch (err) {
-    console.error('Error during sync:', err);
+    console.error('❌ Sync error:', err);
   }
 })();
 
