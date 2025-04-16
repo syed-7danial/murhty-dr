@@ -3,7 +3,7 @@ const fs = require('fs');
 const { promisify } = require('util');
 const path = require('path');
 const { S3Client } = require('@aws-sdk/client-s3');
-const { S3SyncClient, sync } = require('s3-sync-client');
+const { S3SyncClient } = require('s3-sync-client');
 const { fromEnv } = require("@aws-sdk/credential-provider-env");
 const { program } = require('commander');
 const chalk = require('chalk');
@@ -192,11 +192,11 @@ const mainFunction = async () => {
 };
 
 const s3Client1 = new S3Client({ region: 'us-east-1' }); // Use either region
-const { sync1 } = new S3SyncClient({ client: s3Client1 });
+const { sync } = new S3SyncClient({ client: s3Client1 });
 
 (async () => {
   try {
-    await sync1('s3://danial-test-1/', 's3://danial-test-2/');
+    await sync('s3://danial-test-1/', 's3://danial-test-2/');
     console.log('✅ Sync done');
   } catch (err) {
     console.error('❌ Sync error:', err);
