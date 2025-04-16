@@ -186,7 +186,7 @@ const mainFunction = async () => {
   const processCurrentEnv = process.env.PROCESS_CURRENT_ENV === 'true';
 
   custom_logging(`Switching to ${chalk.green(config.switching_to)} environment`);
-  await performS3BucketSync(config);
+  // await performS3BucketSync(config);
   await copyS3EventNotifications(config, processCurrentEnv);
   custom_logging(chalk.green("Process completed"));
 };
