@@ -205,12 +205,12 @@ const s3SyncClient = new S3SyncClient({ client: destinationClient }); // used in
     await sync(
       {
         client: sourceClient,
-        bucket: 'source-bucket-name',
+        bucket: 'danial-test-1',
         prefix: '', // optional
       },
       {
         client: destinationClient,
-        bucket: 'destination-bucket-name',
+        bucket: 'danial-test-2',
         prefix: '', // optional
       }
     );
