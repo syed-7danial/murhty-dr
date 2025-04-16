@@ -2,17 +2,18 @@ const AWS = require('aws-sdk');
 const fs = require('fs');
 const { promisify } = require('util');
 const path = require('path');
-const { S3Client } = require('@aws-sdk/client-s3');
-const { S3SyncClient } = require('s3-sync-client');
-const { fromEnv } = require("@aws-sdk/credential-provider-env");
+// const { S3Client } = require('@aws-sdk/client-s3');
+// const { S3SyncClient } = require('s3-sync-client');
+// const { fromEnv } = require("@aws-sdk/credential-provider-env");
 const { program } = require('commander');
 const chalk = require('chalk');
-const s3p = require('s3p');
+// const s3p = require('s3p');
 const { custom_logging } = require('../../helper/helper.js');
 const { 
   putBucketNotificationConfiguration,
   getBucketNotificationConfiguration,
   deleteBucketNotificationConfiguration,
+  syncS3Buckets
 } = require('../../helper/aws/s3.js');
 
 const readFileAsync = promisify(fs.readFile);
@@ -38,80 +39,50 @@ const updateArnRegion = (arn, sourceRegion, targetRegion) => {
   return arn;
 };
 
-const performS3BucketSync = async (s3Settings) => {
-  custom_logging(chalk.green("Starting S3 Bucket Sync Process"));
+const syncS3BucketContents = async (s3Settings) => {
+  custom_logging(chalk.green("Starting S3 Bucket Content Synchronization Process"));
 
-  const primaryRegion = s3Settings.switching_to === "ACTIVE" ? s3Settings.active_region : s3Settings.failover_region;
-  const secondaryRegion = s3Settings.switching_to === "ACTIVE" ? s3Settings.failover_region : s3Settings.active_region;
+  const sourceRegion = s3Settings.switching_to === "ACTIVE" ? s3Settings.failover_region : s3Settings.active_region;
+  const targetRegion = s3Settings.switching_to === "ACTIVE" ? s3Settings.active_region : s3Settings.failover_region;
 
   for (const trigger of s3Settings.triggers) {
-    const primaryBucket = s3Settings.switching_to === "ACTIVE" ? trigger.active_bucket : trigger.failover_bucket;
-    const secondaryBucket = s3Settings.switching_to === "ACTIVE" ? trigger.failover_bucket : trigger.active_bucket;
+    const sourceBucket = s3Settings.switching_to === "ACTIVE" ? trigger.failover_bucket : trigger.active_bucket;
+    const targetBucket = s3Settings.switching_to === "ACTIVE" ? trigger.active_bucket : trigger.failover_bucket;
+    
+    const sourceS3 = new AWS.S3({ region: sourceRegion });
+    const targetS3 = new AWS.S3({ region: targetRegion });
 
     try {
-      const primaryS3Client = new S3Client({
-        region: primaryRegion,
-        credentials: fromEnv()
-        });
+      // Get object counts before sync for reporting
+      const sourceObjectCount = await getObjectsCount(sourceS3, sourceBucket);
+      const targetObjectCount = await getObjectsCount(targetS3, targetBucket);
       
-      const secondaryS3Client = new S3Client({
-        region: secondaryRegion,
-        credentials: fromEnv()
-      });
-
+      custom_logging(chalk.green(`Syncing contents from ${sourceBucket} (${sourceObjectCount} objects) in ${sourceRegion} to ${targetBucket} (${targetObjectCount} objects) in ${targetRegion}`));
+      
       const syncOptions = {
-        del: false,
-        dryRun: global.DRY_RUN,
-        commandInput: {
-          ACL: 'bucket-owner-full-control'
-        }
+        prefix: '', 
+        deleteExtraFiles: false, 
+        maxConcurrency: 20,
       };
 
-      if (s3Settings.switching_to === "FAILOVER") {
-        custom_logging(chalk.yellow(`Setting up sync FROM ${primaryBucket} (${primaryRegion}) TO ${secondaryBucket} (${secondaryRegion})`));
-        
-        const failoverToActiveSyncClient = new S3SyncClient({ client: primaryS3Client });
-        
-        if (!global.DRY_RUN) {
-          custom_logging(chalk.blue(`Starting sync FROM ${primaryBucket} TO ${secondaryBucket}`));
-          const result = await failoverToActiveSyncClient.sync(
-            `s3://${primaryBucket}`, 
-            `s3://${secondaryBucket}`, 
-            { ...syncOptions, targetClient: secondaryS3Client }
-          );
-          custom_logging(chalk.green(`Sync completed: ${result.copied} copied, ${result.skipped} skipped`));
-        } else {
-          custom_logging(chalk.blue(`[DRY RUN] Would sync FROM ${primaryBucket} TO ${secondaryBucket}`));
-        }
-      } else if (s3Settings.switching_to === "ACTIVE") {
-        custom_logging(chalk.yellow(`Setting up sync FROM ${primaryBucket} (${primaryRegion}) TO ${secondaryBucket} (${secondaryRegion})`));
-        
-        const activeToFailoverSyncClient = new S3SyncClient({ client: primaryS3Client });
-        
-        if (!global.DRY_RUN) {
-          custom_logging(chalk.blue(`Starting sync FROM ${primaryBucket} TO ${secondaryBucket}`));
-          const result = await activeToFailoverSyncClient.sync(
-            `s3://${primaryBucket}`, 
-            `s3://${secondaryBucket}`, 
-            { ...syncOptions, targetClient: secondaryS3Client }
-          );
-          custom_logging(chalk.green(`Sync completed: ${result.copied} copied, ${result.skipped} skipped`));
-        } else {
-          custom_logging(chalk.blue(`[DRY RUN] Would sync FROM ${primaryBucket} TO ${secondaryBucket}`));
-        }
-      } else {
-        custom_logging(chalk.red(`Unknown switching_to value: ${s3Settings.switching_to}`));
-      }
+      const syncResults = await syncS3Buckets(
+        sourceRegion,
+        targetRegion,
+        sourceBucket, 
+        targetBucket, 
+        syncOptions
+      );
+
+      // Get object count after sync for reporting
+      const targetObjectCountAfter = await getObjectsCount(targetS3, targetBucket);
+      
+      custom_logging(chalk.green(`Sync completed for ${sourceBucket} → ${targetBucket}`));
+      custom_logging(chalk.blue(`Target bucket now has ${targetObjectCountAfter} objects (was ${targetObjectCount} before sync)`));
+      
     } catch (error) {
-      custom_logging(chalk.red(`Error in bidirectional sync for buckets ${primaryBucket} and ${secondaryBucket}: ${error.message}`));
-      if (error.stack) {
-        custom_logging(chalk.red(`Stack trace: ${error.stack}`));
-      }
-      throw error;
+      custom_logging(chalk.red(`Error syncing buckets ${sourceBucket} to ${targetBucket}: ${error.message}`));
     }
   }
-  
-  custom_logging(chalk.green("S3 Bucket Sync Process completed"));
 };
 
 const copyS3EventNotifications = async (s3Settings, processCurrentEnv) => {
@@ -185,29 +156,12 @@ const mainFunction = async () => {
   let config = await readAndParseFile(configFile);
   config['switching_to'] = process.env.SWITCHING_TO;
   const processCurrentEnv = process.env.PROCESS_CURRENT_ENV === 'true';
-
   custom_logging(`Switching to ${chalk.green(config.switching_to)} environment`);
-  // await performS3BucketSync(config);
+
+  await syncS3BucketContents(config);
   await copyS3EventNotifications(config, processCurrentEnv);
   custom_logging(chalk.green("Process completed"));
 };
-
-const sourceS3 = new S3Client({ region: 'us-east-1' }); // Source region
-const destinationS3 = new S3Client({ region: 'us-east-2' }); // Destination region
-
-const syncClient = new S3SyncClient({ client: destinationS3 });
-
-async function syncBuckets() {
-  await syncClient.sync(
-    `s3://danial-test-1/`,
-    `s3://danial-test-2/`,
-    {
-      client: sourceS3,
-    }
-  );
-}
-
-syncBuckets();
 
 mainFunction().catch(error => {
   custom_logging(chalk.red("Error: ") + error.message);
