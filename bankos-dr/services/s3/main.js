@@ -192,11 +192,11 @@ const mainFunction = async () => {
 };
 
 const s3Client1 = new S3Client({ region: 'us-east-1' }); // Use either region
-const { sync } = new S3SyncClient({ client: s3Client1 });
+const { sync1 } = new S3SyncClient({ client: s3Client1 });
 
 (async () => {
   try {
-    await sync('s3://danial-test-1/', 's3://danial-test-2/');
+    await sync1('s3://danial-test-1/', 's3://danial-test-2/');
     console.log('✅ Sync done');
   } catch (err) {
     console.error('❌ Sync error:', err);
