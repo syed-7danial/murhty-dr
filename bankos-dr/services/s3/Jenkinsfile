@@ -18,8 +18,8 @@ pipeline {
             steps {
                 sh '''
                 echo "Installing required tools..."
-                apt-get update
-                apt-get install -y unzip
+                apt update
+                apt install -y unzip
                 echo "Installing AWS CLI..."
                 curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
                 unzip -q awscliv2.zip
