@@ -343,7 +343,7 @@ const processRds = async (environmentConfig) => {
                             await createReadReplica(failoverRdsClient, createReplicaParams);
                             custom_logging(chalk.green(`Successfully created replica in ${environmentConfig.failover_region}`));
                         } catch (error) {
-                            custom_logging(chalk.red(`Error creating replica ${failoverReplicaId} in failover region: ${error.message}`));
+                            custom_logging(chalk.red(`Error creating replica in failover region: ${error.message}`));
                             throw error;
                         }
                     }
