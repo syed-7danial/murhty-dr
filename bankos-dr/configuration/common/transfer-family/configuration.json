@@ -1,0 +1,10 @@
+{
+    "userName": "waqar2",
+    "userKeyBucket": "waqar-test-1",
+    "userKeyBucketPath": "test",
+    "userBucket": "waqar-test-1",
+    "userBucketPath": "test",
+    "iamRole": "arn:aws:iam::489994096722:role/daniyal-sftp-role",
+    "serverId": "s-876255c716964a1aa",
+    "restricted": false
+}

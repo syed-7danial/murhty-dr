@@ -331,9 +331,6 @@ const processRds = async (environmentConfig) => {
                     rdsConfig.active_configurations.replica_configuration.identifier) {
                     
                     custom_logging(chalk.yellow(`Active configuration contains replica information. Creating replicas in failover region first...`));
-                    const failoverReplicaId = rdsConfig.active_configurations.replica_configuration.identifier;
-                    let getreplicaIdParams = { DBInstanceIdentifier: rdsConfig.active_configurations.identifier }   
-                    let dbInstanceDetails = await checkIfRdsExists(activeRdsClient, getDbInstanceDetailsparams)
                     try {
                         custom_logging(chalk.green(`Creating replica ${rdsConfig.failover_configurations.identifier} in ${environmentConfig.failover_region}`));
                         
