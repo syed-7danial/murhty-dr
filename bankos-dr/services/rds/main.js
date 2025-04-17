@@ -185,8 +185,18 @@ const waitForDbRenameComplete = async (rdsClient, oldName, newName) => {
 
 const modifyDBInstanceIdentifier = async (rds, dbInstanceIdentifier) => {
     const originalDbName = dbInstanceIdentifier.identifier;
-    const newDbInstanceIdentifier = `${originalDbName}-old`;
 
+    const now = new Date();
+    const year = now.getUTCFullYear();
+    const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(now.getUTCDate()).padStart(2, '0');
+    const hours = String(now.getUTCHours()).padStart(2, '0');
+    const minutes = String(now.getUTCMinutes()).padStart(2, '0');
+    const seconds = String(now.getUTCSeconds()).padStart(2, '0');
+    
+    const timestamp = `${year}${month}${day}-${hours}${minutes}${seconds}`;
+    const newDbInstanceIdentifier = `${originalDbName}-${timestamp}`;
+    
     try {
         await rds.modifyDBInstance({
             DBInstanceIdentifier: originalDbName,
@@ -251,7 +261,6 @@ const processRds = async (environmentConfig) => {
                 await createReadReplica(activeRdsClient, createReadReplicaParams);
                 custom_logging(`Getting ${ rdsConfig.active_configurations.proxy_name } details in ${environmentConfig.active_region}`);
 
-
                 custom_logging(`Promoting ${environmentConfig.active_region}'s ${rdsConfig.active_configurations.identifier} to primary`);
                 let promoteFailoverParams = {
                     DBInstanceIdentifier: rdsConfig.active_configurations.identifier
@@ -291,13 +300,18 @@ const processRds = async (environmentConfig) => {
                     
                     custom_logging(chalk.green(`Successfully renamed to ${renamedActiveInstanceId}`));
 
+                    let oldDbInstanceDetails = await describeDBInstances(activeRdsClient, renamedActiveInstanceId);
+                    const oldDbInstance = oldDbInstanceDetails.DBInstances[0];
+
                     let createReadReplicaParams = {
                         DBInstanceIdentifier: rdsConfig.active_configurations.identifier,
                         SourceDBInstanceIdentifier: `arn:aws:rds:${environmentConfig.active_region}:${accountId}:db:${rdsConfig.active_configurations.identifier}`,
                         SourceRegion: environmentConfig.active_region,
                         DBInstanceClass: dbInstanceDetails.DBInstances[0].DBInstanceClass,
                         DBSubnetGroupName: rdsConfig.failover_configurations.subnet_group_name,
-                        VpcSecurityGroupIds: rdsConfig.failover_configurations.security_group_ids
+                        VpcSecurityGroupIds: rdsConfig.failover_configurations.security_group_ids,
+                        OptionGroupName: oldDbInstance.OptionGroupMemberships && oldDbInstance.OptionGroupMemberships.length > 0 ? 
+                            oldDbInstance.OptionGroupMemberships[0].OptionGroupName : undefined
                     };
 
                     if (rdsConfig.failover_configurations.hasOwnProperty("kms_key_id") && rdsConfig.active_configurations.kms_key_id != "")
@@ -383,17 +397,20 @@ const processRds = async (environmentConfig) => {
                     let renamedActiveInstanceId = await modifyDBInstanceIdentifier(activeRdsClient, rdsConfig.active_configurations);
                     
                     custom_logging(chalk.green(`Successfully renamed to ${renamedActiveInstanceId}`));
-                    let promotedDbDetails = await describeDBInstances(failoverRdsClient, rdsConfig.failover_configurations.identifier);
+                    let oldDbInstanceDetails = await describeDBInstances(activeRdsClient, renamedActiveInstanceId);
+                    const oldDbInstance = oldDbInstanceDetails.DBInstances[0];
                     
                     const { Account: accountId } = await sts.getCallerIdentity({}).promise();
                     
                     let createFailoverReadReplicaParams = {
-                        DBInstanceIdentifier: rdsConfig.failover_configurations.identifier,
+                        DBInstanceIdentifier: rdsConfig.active_configurations.identifier,
                         SourceDBInstanceIdentifier: `arn:aws:rds:${environmentConfig.failover_region}:${accountId}:db:${rdsConfig.failover_configurations.identifier}`,
                         SourceRegion: environmentConfig.failover_region,
                         DBInstanceClass: promotedDbDetails.DBInstances[0].DBInstanceClass,
                         DBSubnetGroupName: rdsConfig.active_configurations.subnet_group_name,
-                        VpcSecurityGroupIds: rdsConfig.active_configurations.security_group_ids
+                        VpcSecurityGroupIds: rdsConfig.active_configurations.security_group_ids,
+                        OptionGroupName: oldDbInstance.OptionGroupMemberships && oldDbInstance.OptionGroupMemberships.length > 0 ? 
+                            oldDbInstance.OptionGroupMemberships[0].OptionGroupName : undefined
                     };
                     
                     if (rdsConfig.active_configurations.hasOwnProperty("kms_key_id") && rdsConfig.active_configurations.kms_key_id != "")

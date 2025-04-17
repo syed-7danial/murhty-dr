@@ -6,8 +6,8 @@
             "active_configurations": {
                 "identifier": "database-1",
                 "kms_key_id": "40a25d87-c7cd-4162-b7b8-f4fef85b53a5",
-                "subnet_group_name":"default-vpc-0e8e44ad8aa9d1c32",
-                "security_group_ids":["sg-01f73abdd8b06d85a"],
+                "subnet_group_name":"default-vpc-0bacd8b2abdd0757d",
+                "security_group_ids":["sg-07bfca2fdbfa5ea66"],
                 "proxy_name": "database-1",
                 "replica_configuration" : [
                     {
@@ -18,8 +18,8 @@
             "failover_configurations": {
                 "identifier": "database-1",
                 "kms_key_id": "ff9aceb7-a089-4dcd-8aee-9e50e62e7c89",
-                "subnet_group_name":"testing-danial-2",
-                "security_group_ids":["sg-02ef0c8a06a6586d8"],
+                "subnet_group_name":"testing-danial-3",
+                "security_group_ids":["sg-0c6b2e86f214b7e99"],
                 "proxy_name": "test-2"
             }
         }
