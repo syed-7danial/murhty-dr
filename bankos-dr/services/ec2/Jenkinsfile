@@ -1,13 +1,14 @@
 pipeline {
     agent any
     environment {
-        CONFIG_FILE = './ec2-instance/configuration.json'
+        CONFIG_FILE = './cloudwatch/configuration.json'
     }
     parameters {
         choice(name: 'SWITCHING_TO', choices: ['ACTIVE', 'FAILOVER'], description: 'Select the environment')
-        password(name: 'AWS_ACCESS_KEY_ID', defaultValue: '', description: 'AWS_ACCESS_KEY_ID')
-        password(name: 'AWS_SECRET_ACCESS_KEY', defaultValue: '', description: 'AWS_SECRET_ACCESS_KEY')
-        password(name: 'AWS_SESSION_TOKEN', defaultValue: '', description: 'AWS_SESSION_TOKEN')
+        password(name: 'AWS_ACCESS_KEY_ID', defaultValue: '', description: 'Enter AWS_ACCESS_KEY_ID')
+        password(name: 'AWS_SECRET_ACCESS_KEY', defaultValue: '', description: 'Enter AWS_SECRET_ACCESS_KEY')
+        password(name: 'AWS_SESSION_TOKEN', defaultValue: '', description: 'Enter AWS_SESSION_TOKEN')
+        choice(name: 'CLIENT_NAME', choices: ['FED', 'RTP', 'FED-ACH', 'sample-client', 'All'], description: 'Select the CLIENT_NAME')        
 
         booleanParam(name: 'DRY_RUN', defaultValue: false, description: 'Check this to run the pipeline in dry run mode')
         booleanParam(name: 'PROCESS_CURRENT_ENV', defaultValue: false, description: 'Check this to process current environment')
@@ -22,6 +23,7 @@ pipeline {
                 '''
             }
         }
+
         stage('Load and Process Configuration') {
             steps {
                 script {
@@ -29,32 +31,31 @@ pipeline {
                     env.AWS_SECRET_ACCESS_KEY = params.AWS_SECRET_ACCESS_KEY
                     env.AWS_SESSION_TOKEN = params.AWS_SESSION_TOKEN
                     env.SWITCHING_TO = params.SWITCHING_TO
-
-                    def activeFilteredArray = []
-                    def failoverFilteredArray = []
                     
                     def clientsToProcess = []
+                    if (params.CLIENT_NAME == 'All') {
+                        clientsToProcess = ['FED', 'RTP', 'FED-ACH', 'sample-client']
+                    } else {
+                        clientsToProcess = [params.CLIENT_NAME]
+                    }
+
                     if (params.PROCESS_COMMON_CONFIG) {
                         clientsToProcess.add('common')
                     }
 
-                    if (clientsToProcess.size() > 0) {
-                        for (client in clientsToProcess) {
-                            def command = "node bankos-dr/services/ec2/main.js"
-                            env.CLIENT_NAME = client
+                    for (client in clientsToProcess) {
+                        def command = "node bankos-dr/services/ec2/main.js"
+                        env.CLIENT_NAME = client
 
-                            if (params.DRY_RUN) {
-                                command += ' -dr'
-                            }
-                            if (params.PROCESS_CURRENT_ENV) {
-                                command += ' -pce'
-                            }
-
-                            echo "Running for client: ${client}"
-                            sh command
+                        if (params.DRY_RUN) {
+                            command += ' -dr'
                         }
-                    } else {
-                        echo "No clients to process. Skipping node script execution."
+                        if (params.PROCESS_CURRENT_ENV) {
+                            command += ' -pce'
+                        }
+
+                        echo "Running for client: ${client}"
+                        sh command
                     }
                 }
             }

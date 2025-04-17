@@ -307,7 +307,7 @@ const processRds = async (environmentConfig) => {
                         DBInstanceIdentifier: rdsConfig.active_configurations.identifier,
                         SourceDBInstanceIdentifier: `arn:aws:rds:${environmentConfig.active_region}:${accountId}:db:${rdsConfig.active_configurations.identifier}`,
                         SourceRegion: environmentConfig.active_region,
-                        DBInstanceClass: dbInstanceDetails.DBInstances[0].DBInstanceClass,
+                        DBInstanceClass: oldDbInstance.DBInstances[0].DBInstanceClass,
                         DBSubnetGroupName: rdsConfig.failover_configurations.subnet_group_name,
                         VpcSecurityGroupIds: rdsConfig.failover_configurations.security_group_ids,
                         OptionGroupName: oldDbInstance.OptionGroupMemberships && oldDbInstance.OptionGroupMemberships.length > 0 ? 
@@ -406,7 +406,7 @@ const processRds = async (environmentConfig) => {
                         DBInstanceIdentifier: rdsConfig.active_configurations.identifier,
                         SourceDBInstanceIdentifier: `arn:aws:rds:${environmentConfig.failover_region}:${accountId}:db:${rdsConfig.failover_configurations.identifier}`,
                         SourceRegion: environmentConfig.failover_region,
-                        DBInstanceClass: promotedDbDetails.DBInstances[0].DBInstanceClass,
+                        DBInstanceClass: oldDbInstance.DBInstances[0].DBInstanceClass,
                         DBSubnetGroupName: rdsConfig.active_configurations.subnet_group_name,
                         VpcSecurityGroupIds: rdsConfig.active_configurations.security_group_ids,
                         OptionGroupName: oldDbInstance.OptionGroupMemberships && oldDbInstance.OptionGroupMemberships.length > 0 ? 
