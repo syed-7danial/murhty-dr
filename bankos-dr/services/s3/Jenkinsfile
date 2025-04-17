@@ -14,6 +14,19 @@ pipeline {
         booleanParam(name: 'PROCESS_COMMON_CONFIG', defaultValue: false, description: 'Process common configuration')
     }
     stages {
+        stage('Install AWS CLI') {
+            steps {
+                sh '''
+                echo "Installing AWS CLI..."
+                curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+                unzip -q awscliv2.zip
+                sudo ./aws/install
+                aws --version
+                echo "AWS CLI installed successfully"
+                '''
+            }
+        }
+        
         stage('Install Node.js and Packages') {
             steps {
                 sh '''
@@ -21,14 +34,15 @@ pipeline {
                 npm install
                 '''
             }
-            
         }
+        
         stage('Debug') {
             steps {
                 sh 'which aws || echo "AWS CLI not found"'
-                sh 'echo $PATH'
+                sh 'aws --version'
             }
         }
+        
         stage('Load and Process Configuration') {
             steps {
                 script {
@@ -65,6 +79,15 @@ pipeline {
                     }
                 }
             }
+        }
+    }
+    
+    post {
+        always {
+            sh '''
+            echo "Cleaning up AWS CLI installation files..."
+            rm -rf aws awscliv2.zip
+            '''
         }
     }
 }
