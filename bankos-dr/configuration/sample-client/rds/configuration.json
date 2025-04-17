@@ -9,11 +9,9 @@
                 "subnet_group_name":"default-vpc-0bacd8b2abdd0757d",
                 "security_group_ids":["sg-07bfca2fdbfa5ea66"],
                 "proxy_name": "database-1",
-                "replica_configuration" : [
-                    {
-                        "identifier": "database-1-rr"
-                    }
-                ]
+                "replica_configuration" : {
+                    "identifier": "database-1-rr"
+                }
             },
             "failover_configurations": {
                 "identifier": "database-1",
