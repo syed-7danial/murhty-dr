@@ -310,8 +310,7 @@ const processRds = async (environmentConfig) => {
                         DBInstanceClass: oldDbInstance.DBInstances[0].DBInstanceClass,
                         DBSubnetGroupName: rdsConfig.failover_configurations.subnet_group_name,
                         VpcSecurityGroupIds: rdsConfig.failover_configurations.security_group_ids,
-                        OptionGroupName: oldDbInstance.OptionGroupMemberships && oldDbInstance.OptionGroupMemberships.length > 0 ? 
-                            oldDbInstance.OptionGroupMemberships[0].OptionGroupName : undefined
+                        OptionGroupName: oldDbInstance.OptionGroupMemberships[0].OptionGroupName
                     };
 
                     if (rdsConfig.failover_configurations.hasOwnProperty("kms_key_id") && rdsConfig.active_configurations.kms_key_id != "")
@@ -409,8 +408,7 @@ const processRds = async (environmentConfig) => {
                         DBInstanceClass: oldDbInstance.DBInstances[0].DBInstanceClass,
                         DBSubnetGroupName: rdsConfig.active_configurations.subnet_group_name,
                         VpcSecurityGroupIds: rdsConfig.active_configurations.security_group_ids,
-                        OptionGroupName: oldDbInstance.OptionGroupMemberships && oldDbInstance.OptionGroupMemberships.length > 0 ? 
-                            oldDbInstance.OptionGroupMemberships[0].OptionGroupName : undefined
+                        OptionGroupName: oldDbInstance.OptionGroupMemberships[0].OptionGroupName
                     };
                     
                     if (rdsConfig.active_configurations.hasOwnProperty("kms_key_id") && rdsConfig.active_configurations.kms_key_id != "")
