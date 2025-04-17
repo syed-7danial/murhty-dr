@@ -18,12 +18,12 @@ pipeline {
             steps {
                 sh '''
                 echo "Installing required tools..."
-                sudo apt-get update
-                sudo apt-get install -y unzip
+                apt-get update
+                apt-get install -y unzip
                 echo "Installing AWS CLI..."
                 curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
                 unzip -q awscliv2.zip
-                sudo ./aws/install
+                ./aws/install
                 aws --version
                 echo "AWS CLI installed successfully"
                 '''
