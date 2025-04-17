@@ -37,29 +37,6 @@ const {
     deregisterDBProxyTargets
 } = require('../../helper/aws/rds.js');
 
-const waitForDbInstanceAvailable = async (rdsClient, dbInstanceIdentifier) => {
-    let instanceNotAvailable = true;
-
-    while (instanceNotAvailable) {
-        try {
-            const response = await describeDBInstances(rdsClient, dbInstanceIdentifier);
-
-            const dbInstance = response.DBInstances[0];
-
-            if (dbInstance && dbInstance.DBInstanceStatus === "available") {
-                custom_logging(chalk.green(`${dbInstanceIdentifier} DB instance is now available.`));
-                instanceNotAvailable = false;
-            } else {
-                custom_logging(chalk.yellow(`Waiting for ${dbInstanceIdentifier} DB instance to become available. Current status: ${dbInstance.DBInstanceStatus}`));
-                await new Promise(resolve => setTimeout(resolve, global.SLEEP_TIME * 60));
-            }
-        } catch (error) {
-            custom_logging(chalk.red(`Error: Failed to check status of ${dbInstanceIdentifier}.`));
-            throw error;
-        }
-    }
-};
-
 const updateProxyTargets = async (rdsClient, proxyName, newDbInstanceId) => {
     try {
         custom_logging(`Getting target groups for proxy ${proxyName}`);
@@ -345,7 +322,7 @@ const processRds = async (environmentConfig) => {
                         const failoverReplicaId = replicaConfig.identifier;
                         
                         try {
-                            custom_logging(chalk.green(`Creating replica ${failoverReplicaId} in ${environmentConfig.failover_region}`));
+                            custom_logging(chalk.green(`Creating replica ${rdsConfig.failover_configurations.identifier} in ${environmentConfig.failover_region}`));
                             
                             const dbInstanceDetails = await describeDBInstances(activeRdsClient, rdsConfig.active_configurations.identifier);
                             const { Account: accountId} = await sts.getCallerIdentity({}).promise();
@@ -364,7 +341,6 @@ const processRds = async (environmentConfig) => {
                             }
                             
                             await createReadReplica(failoverRdsClient, createReplicaParams);
-                            await waitForDbInstanceAvailable(failoverRdsClient, failoverReplicaId);
                             custom_logging(chalk.green(`Successfully created replica ${failoverReplicaId} in ${environmentConfig.failover_region}`));
                         } catch (error) {
                             custom_logging(chalk.red(`Error creating replica ${failoverReplicaId} in failover region: ${error.message}`));
