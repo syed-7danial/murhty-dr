@@ -396,6 +396,9 @@ const syncS3Buckets = async (sourceRegion, targetRegion, sourceBucket, targetBuc
     const configContent = `
 [profile s3transfer]
 region = ${targetRegion}
+aws_access_key_id = ${process.env.AWS_ACCESS_KEY_ID}
+aws_secret_access_key = ${process.env.AWS_SECRET_ACCESS_KEY}
+aws_session_token = ${process.env.AWS_SESSION_TOKEN}
 s3 =
   max_concurrent_requests = ${DEFAULT_MAX_CONCURRENCY}
   multipart_threshold = ${DEFAULT_MULTIPART_THRESHOLD}
@@ -461,7 +464,7 @@ s3 =
       awsProcess.on('close', (code) => {
         // Clean up the temporary config directory
         try {
-          fs.rmdirSync(tempConfigDir, { recursive: true });
+          fs.rmSync(tempConfigDir, { recursive: true });
         } catch (err) {
           custom_logging(`Error cleaning up temp config: ${err.message}`);
         }
