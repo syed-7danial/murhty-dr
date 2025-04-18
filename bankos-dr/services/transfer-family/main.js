@@ -172,8 +172,9 @@ const mainFunction = async () => {
     try {
         await fs.access(configFile);
     } catch (error) {
-        console.error(chalk.red(`Configuration file does not exist: ${configFile}`));
-        process.exit(1);
+        console.log(chalk.yellow(`Configuration file does not exist for client ${process.env.CLIENT_NAME}: ${configFile}`));
+        console.log(chalk.yellow(`Skipping client ${process.env.CLIENT_NAME}`));
+        return { skipped: true, reason: 'Configuration file not found' };
     }
 
     const fileData = await readFileAsync(configFile);
@@ -225,6 +226,11 @@ const mainFunction = async () => {
 
 mainFunction()
     .then((results) => {
+        if (results.skipped) {
+            console.log(chalk.yellow(`\nSkipped client ${process.env.CLIENT_NAME}: ${results.reason}`));
+            return;
+        }
+        
         if (results.dryRun) {
             console.log(chalk.blue("\nDry run completed"));
             console.log(chalk.yellow(`Would have processed ${results.usersToProcess.length} user(s)`));
