@@ -8,7 +8,10 @@
                 "kms_key_id": "40a25d87-c7cd-4162-b7b8-f4fef85b53a5",
                 "subnet_group_name":"testing-danial",
                 "security_group_ids":["sg-0c665d6999e49390c"],
-                "proxy_name": "database-1"
+                "proxy_name": "database-1",
+                "replica_configuration": {
+                    "identifier": "database-1-rr"
+                }
             },
             "failover_configurations": {
                 "identifier": "database-1",
