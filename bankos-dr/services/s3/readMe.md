@@ -10,7 +10,7 @@ Dry-run mode for safe testing and validation.
 
 Option to process the current environment, dynamically controlled via Jenkins pipeline (Jenkinsfile).
 
-You can also change the values of the following variables responsible for multipart uploads and parallel uploads.
+You can also change the values of the following variables responsible for multipart uploads and parallel uploads defined in the helper/s3.js
 `const DEFAULT_MAX_CONCURRENCY = 20;`
 `const DEFAULT_MULTIPART_THRESHOLD = '8MB';`
 `const DEFAULT_MULTIPART_CHUNKSIZE = '16MB';`
