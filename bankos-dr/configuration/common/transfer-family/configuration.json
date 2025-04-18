@@ -1,10 +1,22 @@
-{
-    "userName": "waqar2",
-    "userKeyBucket": "waqar-test-1",
-    "userKeyBucketPath": "test",
-    "userBucket": "waqar-test-1",
-    "userBucketPath": "test",
-    "iamRole": "arn:aws:iam::489994096722:role/daniyal-sftp-role",
-    "serverId": "s-876255c716964a1aa",
-    "restricted": false
-}
+[
+    {
+      "userName": "waqar2",
+      "userKeyBucket": "danial-test-1",
+      "userKeyBucketPath": "test",
+      "userBucket": "danial-test-1",
+      "userBucketPath": "test",
+      "iamRole": "arn:aws:iam::489994096722:role/daniyal-sftp-role",
+      "serverId": "s-709086ea070647a2b",
+      "restricted": false
+    },
+    {
+      "userName": "waqar3",
+      "userKeyBucket": "danial-test-1",
+      "userKeyBucketPath": "test2",
+      "userBucket": "danial-test-1",
+      "userBucketPath": "test2",
+      "iamRole": "arn:aws:iam::489994096722:role/daniyal-sftp-role",
+      "serverId": "s-709086ea070647a2b",
+      "restricted": true
+    }
+  ]

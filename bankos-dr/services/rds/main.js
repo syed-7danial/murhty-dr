@@ -228,6 +228,7 @@ const processRds = async (environmentConfig) => {
                 let currentDateTime = new Date().toISOString();
                 currentDateTime = currentDateTime.replaceAll("T", "-").replaceAll(":", "-").split(".")[0]
 
+                // First, check if the DB exists and if it's a read replica
                 if (dbInstanceDetails && dbInstanceDetails.DBInstances.length > 0) {
                     const dbInstance = dbInstanceDetails.DBInstances[0];
                     
@@ -276,7 +277,7 @@ const processRds = async (environmentConfig) => {
                     custom_logging(`Creating read-replica of ${rdsConfig.failover_configurations.identifier} in ${environmentConfig.active_region}`);
                     await createReadReplica(activeRdsClient, createReadReplicaParams);
                 }
-                
+
                 custom_logging(`Promoting ${environmentConfig.active_region}'s ${rdsConfig.active_configurations.identifier} to primary`);
                 let promoteFailoverParams = {
                     DBInstanceIdentifier: rdsConfig.active_configurations.identifier
