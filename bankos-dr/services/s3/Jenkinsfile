@@ -75,6 +75,7 @@ pipeline {
             echo "Cleaning up AWS CLI installation files..."
             rm -rf aws awscliv2.zip
             '''
+            cleanWs()
         }
     }
 }
