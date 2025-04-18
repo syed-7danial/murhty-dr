@@ -4,14 +4,11 @@ pipeline {
         CONFIG_FILE = 'bankos-dr/configuration/common/transfer-family/configuration.json'
     }
     parameters {
-        choice(name: 'SWITCHING_TO', choices: ['ACTIVE', 'FAILOVER'], description: 'Select the environment')
         password(name: 'AWS_ACCESS_KEY_ID', defaultValue: '', description: 'AWS_ACCESS_KEY_ID')
         password(name: 'AWS_SECRET_ACCESS_KEY', defaultValue: '', description: 'AWS_SECRET_ACCESS_KEY')
         password(name: 'AWS_SESSION_TOKEN', defaultValue: '', description: 'AWS_SESSION_TOKEN')
 
-        booleanParam(name: 'DRY_RUN', defaultValue: false, description: 'Check this to run the pipeline in dry run mode')
-        booleanParam(name: 'PROCESS_CURRENT_ENV', defaultValue: false, description: 'Check this to process current environment')
-        booleanParam(name: 'PROCESS_COMMON_CONFIG', defaultValue: false, description: 'Process common configuration')
+        booleanParam(name: 'DRY_RUN', defaultValue: false, description: 'Run the script in dry-run mode')
     }
     stages {
         stage('Install Node.js and Packages') {
@@ -22,36 +19,20 @@ pipeline {
                 '''
             }
         }
-        stage('Load and Process Configuration') {
+        stage('Process Configuration') {
             steps {
                 script {
                     env.AWS_ACCESS_KEY_ID = params.AWS_ACCESS_KEY_ID
                     env.AWS_SECRET_ACCESS_KEY = params.AWS_SECRET_ACCESS_KEY
                     env.AWS_SESSION_TOKEN = params.AWS_SESSION_TOKEN
-                    env.SWITCHING_TO = params.SWITCHING_TO
-                 
-                    def clientsToProcess = []
-                    if (params.PROCESS_COMMON_CONFIG) {
-                        clientsToProcess.add('common')
-                    }
 
-                    if (clientsToProcess.size() > 0) {
-                        for (client in clientsToProcess) {
-                            def command = "node bankos-dr/services/cloudwatch-rules/main.js"
-                            env.CLIENT_NAME = client
+                    def command = "node bankos-dr/services/transfer-family-user/main.js -f ${CONFIG_FILE}"
 
-                            if (params.DRY_RUN) {
-                                command += ' -dr'
-                            }
-                            if (params.PROCESS_CURRENT_ENV) {
-                                command += ' -pce'
-                            }
-
-                            echo "Running for client: ${client}"
-                            sh command
-                        }
+                    if (params.DRY_RUN) {
+                        echo "DRY RUN enabled. Would run: ${command}"
                     } else {
-                        echo "No clients to process. Skipping node script execution."
+                        echo "Running: ${command}"
+                        sh command
                     }
                 }
             }

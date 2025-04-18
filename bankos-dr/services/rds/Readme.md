@@ -53,6 +53,9 @@ Active RDS configuration — Details for RDS in Active region.
 Failover RDS configuration — Details for RDS in Failover region.
 
 ### Actions performed:
+If there are no replica in the failover region and both the primary instance and the replica exists in the active region. Then, the code will check this through the `replica_configuration` object in the `configuration.json`. If the replica_configuration has an identifier in it, this means the replica and the primary instance are in the active region. Then,
+the first action would be to create a replica in the failover region from the primary instance in the active region.
+
 Promote Failover RDS to be the new standalone primary instance (remove replication status if it was a replica).
 
 update the proxy in the failover region
