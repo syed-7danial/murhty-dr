@@ -23,13 +23,6 @@ pipeline {
             }
         }
         
-        stage('Debug') {
-            steps {
-                sh 'which aws || echo "AWS CLI not found"'
-                sh 'aws --version'
-            }
-        }
-        
         stage('Load and Process Configuration') {
             steps {
                 script {
@@ -71,10 +64,6 @@ pipeline {
     
     post {
         always {
-            sh '''
-            echo "Cleaning up AWS CLI installation files..."
-            rm -rf aws awscliv2.zip
-            '''
             cleanWs()
         }
     }

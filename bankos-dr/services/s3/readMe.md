@@ -9,6 +9,13 @@ The script also supports:
 Dry-run mode for safe testing and validation.
 
 Option to process the current environment, dynamically controlled via Jenkins pipeline (Jenkinsfile).
+
+You can also change the values of the following variables responsible for multipart uploads and parallel uploads.
+`const DEFAULT_MAX_CONCURRENCY = 20;`
+`const DEFAULT_MULTIPART_THRESHOLD = '8MB';`
+`const DEFAULT_MULTIPART_CHUNKSIZE = '16MB';`
+`const DEFAULT_MAX_QUEUE = 10000;`
+
 ## How It Works
 ### Configuration Check
 Before execution, run-s3.js performs the following checks:
