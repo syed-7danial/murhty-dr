@@ -14,7 +14,7 @@ function convertPemToSSH(pem, username) {
     const forgePublicKey = forge.pki.publicKeyFromPem(pem);
     const sshBuffer = forge.ssh.publicKeyToOpenSSH(forgePublicKey, username);
     return sshBuffer.toString();
-  }
+}
 
 function generateSSHKeyPair(username) {
     console.log(chalk.yellow( "Creating SSH KeyPair" ))
