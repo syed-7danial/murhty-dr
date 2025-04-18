@@ -295,7 +295,7 @@ const processRds = async (environmentConfig) => {
                 
                 await updateProxyTargets(activeRdsClient, rdsConfig.active_configurations.proxy_name, rdsConfig.active_configurations.identifier);
 
-                if (!global.PROCESS_CURRENT_ENVIRONMENT) {
+                if (global.PROCESS_CURRENT_ENVIRONMENT) {
                     let renamedActiveInstanceId = await modifyDBInstanceIdentifier(failoverRdsClient, rdsConfig.failover_configurations);
                     
                     custom_logging(chalk.green(`Successfully renamed to ${renamedActiveInstanceId}`));
@@ -322,7 +322,7 @@ const processRds = async (environmentConfig) => {
                 }
 
                 custom_logging(chalk.yellow(`${rdsConfig.active_configurations.identifier} is now the primary in ${environmentConfig.active_region}`));
-                if (!global.PROCESS_CURRENT_ENVIRONMENT) {
+                if (global.PROCESS_CURRENT_ENVIRONMENT) {
                     custom_logging(chalk.yellow(`${rdsConfig.active_configurations.identifier} is now a read replica in ${environmentConfig.failover_region}`));
                 }
             } 
@@ -388,7 +388,7 @@ const processRds = async (environmentConfig) => {
                 custom_logging(`Registering ${rdsConfig.failover_configurations.identifier} with proxy ${rdsConfig.failover_configurations.proxy_name} in ${environmentConfig.failover_region}`);
                 await updateProxyTargets(failoverRdsClient, rdsConfig.failover_configurations.proxy_name, rdsConfig.failover_configurations.identifier);
 
-                if (!global.PROCESS_CURRENT_ENVIRONMENT) {
+                if (global.PROCESS_CURRENT_ENVIRONMENT) {
                     let renamedActiveInstanceId = await modifyDBInstanceIdentifier(activeRdsClient, rdsConfig.active_configurations);
                     
                     custom_logging(chalk.green(`Successfully renamed to ${renamedActiveInstanceId}`));
@@ -416,7 +416,7 @@ const processRds = async (environmentConfig) => {
                 }
                 
                 custom_logging(chalk.yellow(`${rdsConfig.failover_configurations.identifier} is now the primary in ${environmentConfig.failover_region}`));
-                if (!global.PROCESS_CURRENT_ENVIRONMENT) {
+                if (global.PROCESS_CURRENT_ENVIRONMENT) {
                     custom_logging(chalk.yellow(`${rdsConfig.failover_configurations.identifier} is now a read replica in ${environmentConfig.active_region}`));
                 }
             }
