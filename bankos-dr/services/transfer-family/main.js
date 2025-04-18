@@ -3,6 +3,7 @@ require('aws-sdk/lib/maintenance_mode_message').suppress = true;
 const forge = require('node-forge');
 const fs = require('fs').promises;
 const chalk = require('chalk');
+const path = require('path');
 const { program } = require('commander');
 
 AWS.config.update({
@@ -109,11 +110,11 @@ async function createTransferUser(username, serverId, publicKey, role, bucket, b
 
 const readFileAsync = async (filePath) => {
     try {
-        console.log(chalk.yellow("Reading configuration file"));
+        console.log(chalk.yellow(`Reading configuration file: ${filePath}`));
         return await fs.readFile(filePath, 'utf8');
     } 
     catch (error) {
-        console.error(chalk.red('Error reading file:', error));
+        console.error(chalk.red(`Error reading file ${filePath}:`, error));
         throw error;
     }
 };
@@ -153,30 +154,51 @@ async function processUser(userConfig) {
 const mainFunction = async () => {
     program
         .version('0.0.1')
-        .option('-f, --file <file>', "File with user configurations")
+        .option('-dr, --dry-run', "Dry run - no actual changes will be made")
         .parse(process.argv);
 
     const options = program.opts();
-    if (!options.file) {
-        console.error(chalk.red("Configuration file is missing"));
-        return;
+    
+    if (!process.env.CLIENT_NAME) {
+        console.error(chalk.red("CLIENT_NAME environment variable not set"));
+        process.exit(1);
+    }
+    
+    // Use client-specific configuration file based on CLIENT_NAME environment variable
+    const configFile = path.resolve(__dirname, '..', '..', 'configuration', process.env.CLIENT_NAME, 'transfer-family', 'configuration.json');
+    
+    console.log(chalk.blue(`Using configuration file for client ${process.env.CLIENT_NAME}: ${configFile}`));
+    
+    try {
+        await fs.access(configFile);
+    } catch (error) {
+        console.error(chalk.red(`Configuration file does not exist: ${configFile}`));
+        process.exit(1);
     }
 
-    const filePath = options.file;
-    const fileData = await readFileAsync(filePath);
+    const fileData = await readFileAsync(configFile);
     
     let configs;
     try {
         configs = JSON.parse(fileData);
     } catch (error) {
         console.error(chalk.red("Error parsing JSON configuration:", error));
-        return;
+        process.exit(1);
     }
     
     // Handle both array and single object formats
     const userConfigs = Array.isArray(configs) ? configs : [configs];
     
-    console.log(chalk.blue(`Found ${userConfigs.length} user(s) to process`));
+    console.log(chalk.blue(`Found ${userConfigs.length} user(s) to process for client: ${process.env.CLIENT_NAME}`));
+    
+    if (options.dryRun) {
+        console.log(chalk.yellow("DRY RUN MODE - No changes will be made"));
+        console.log(chalk.yellow("Users that would be processed:"));
+        userConfigs.forEach(config => {
+            console.log(chalk.yellow(`- ${config.userName}`));
+        });
+        return { dryRun: true, usersToProcess: userConfigs.map(config => config.userName) };
+    }
     
     const results = [];
     for (const userConfig of userConfigs) {
@@ -203,6 +225,12 @@ const mainFunction = async () => {
 
 mainFunction()
     .then((results) => {
+        if (results.dryRun) {
+            console.log(chalk.blue("\nDry run completed"));
+            console.log(chalk.yellow(`Would have processed ${results.usersToProcess.length} user(s)`));
+            return;
+        }
+        
         console.log(chalk.blue("\nProcess completed"));
         
         const successful = results.filter(r => r.status === 'success').length;
@@ -211,6 +239,7 @@ mainFunction()
         console.log(chalk.green(`Successfully created: ${successful} user(s)`));
         if (failed > 0) {
             console.log(chalk.red(`Failed to create: ${failed} user(s)`));
+            process.exit(1);
         }
     })
     .catch((error) => {

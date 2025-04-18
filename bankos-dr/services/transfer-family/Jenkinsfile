@@ -4,11 +4,10 @@ pipeline {
         CONFIG_FILE = 'bankos-dr/configuration/common/transfer-family/configuration.json'
     }
     parameters {
+        choice(name: 'CLIENT_NAME', choices: ['All', 'FED', 'RTP', 'FED-ACH', 'sample-client'], description: 'Select the CLIENT_NAME')        
         password(name: 'AWS_ACCESS_KEY_ID', defaultValue: '', description: 'AWS_ACCESS_KEY_ID')
         password(name: 'AWS_SECRET_ACCESS_KEY', defaultValue: '', description: 'AWS_SECRET_ACCESS_KEY')
         password(name: 'AWS_SESSION_TOKEN', defaultValue: '', description: 'AWS_SESSION_TOKEN')
-
-        booleanParam(name: 'DRY_RUN', defaultValue: false, description: 'Run the script in dry-run mode')
     }
     stages {
         stage('Install Node.js and Packages') {
@@ -26,12 +25,26 @@ pipeline {
                     env.AWS_SECRET_ACCESS_KEY = params.AWS_SECRET_ACCESS_KEY
                     env.AWS_SESSION_TOKEN = params.AWS_SESSION_TOKEN
 
-                    def command = "node bankos-dr/services/transfer-family/main.js -f ${CONFIG_FILE}"
-
-                    if (params.DRY_RUN) {
-                        echo "DRY RUN enabled. Would run: ${command}"
+                    def clientsToProcess = []
+                    if (params.CLIENT_NAME == 'All') {
+                        clientsToProcess = ['FED', 'RTP', 'FED-ACH', 'sample-client']
                     } else {
-                        echo "Running: ${command}"
+                        clientsToProcess = [params.CLIENT_NAME]
+                    }
+
+                    if (params.PROCESS_COMMON_CONFIG) {
+                        clientsToProcess.add('common')
+                    }
+
+                    for (client in clientsToProcess) {
+                        def command = "node bankos-dr/services/transfer-family/main.js"
+                        env.CLIENT_NAME = client
+
+                        if (params.DRY_RUN) {
+                            command += ' -dr'
+                        }
+
+                        echo "Running for client: ${client}"
                         sh command
                     }
                 }
