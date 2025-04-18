@@ -26,7 +26,7 @@ pipeline {
                     env.AWS_SECRET_ACCESS_KEY = params.AWS_SECRET_ACCESS_KEY
                     env.AWS_SESSION_TOKEN = params.AWS_SESSION_TOKEN
 
-                    def command = "node bankos-dr/services/transfer-family-user/main.js -f ${CONFIG_FILE}"
+                    def command = "node bankos-dr/services/transfer-family/main.js -f ${CONFIG_FILE}"
 
                     if (params.DRY_RUN) {
                         echo "DRY RUN enabled. Would run: ${command}"
