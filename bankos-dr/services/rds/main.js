@@ -300,7 +300,7 @@ const processRds = async (environmentConfig) => {
                     
                     custom_logging(chalk.green(`Successfully renamed to ${renamedActiveInstanceId}`));
 
-                    let oldDbInstanceDetails = await describeDBInstances(activeRdsClient, renamedActiveInstanceId);
+                    let oldDbInstanceDetails = await describeDBInstances(failoverRdsClient, renamedActiveInstanceId);
                     const oldDbInstance = oldDbInstanceDetails.DBInstances[0];
 
                     let createReadReplicaParams = {
