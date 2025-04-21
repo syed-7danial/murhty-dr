@@ -372,7 +372,7 @@ const processRds = async (environmentConfig) => {
                         }
                     }
                     else {
-                        custom_logging(chalk.green(`${rdsConfig.failover_configurations.identifer} exist, moving on to promote it...`));
+                        custom_logging(chalk.green(`${rdsConfig.failover_configurations.identifier} exist, moving on to promote it...`));
                     }
                 }
                 custom_logging(`Promoting ${environmentConfig.failover_region}'s ${rdsConfig.failover_configurations.identifier} to primary`);
