@@ -312,7 +312,7 @@ const processRds = async (environmentConfig) => {
                     const { Account: accountId} = await sts.getCallerIdentity({}).promise();
                             
                     const createReplicaOfPromotedActiveParams = {
-                        DBInstanceIdentifier: `${rdsConfig.active_configurations.replica_configuration.identifier}-readonly`,
+                        DBInstanceIdentifier: `${rdsConfig.active_configurations.identifier}-readonly`,
                         SourceDBInstanceIdentifier: `arn:aws:rds:${environmentConfig.active_region}:${accountId}:db:${rdsConfig.active_configurations.identifier}`,
                         DBInstanceClass: failoverReplicaInstanceDetails.DBInstances[0].DBInstanceClass,
                         DBSubnetGroupName: rdsConfig.active_configurations.subnet_group_name,
@@ -431,7 +431,7 @@ const processRds = async (environmentConfig) => {
                     const { Account: accountId} = await sts.getCallerIdentity({}).promise();
                             
                     const createReplicaOfPromotedFailoverParams = {
-                        DBInstanceIdentifier: `${rdsConfig.failover_configurations.replica_configuration.identifier}-readonly`,
+                        DBInstanceIdentifier: `${rdsConfig.failover_configurations.identifier}-readonly`,
                         SourceDBInstanceIdentifier: `arn:aws:rds:${environmentConfig.failover_region}:${accountId}:db:${rdsConfig.failover_configurations.identifier}`,
                         DBInstanceClass: activeReplicaInstanceDetails.DBInstances[0].DBInstanceClass,
                         DBSubnetGroupName: rdsConfig.failover_configurations.subnet_group_name,
