@@ -315,7 +315,7 @@ const processRds = async (environmentConfig) => {
                         DBInstanceIdentifier: rdsConfig.active_configurations.replica_configuration.identifier,
                         SourceDBInstanceIdentifier: `arn:aws:rds:${environmentConfig.failover_region}:${accountId}:db:${rdsConfig.failover_configurations.identifier}`,
                         DBInstanceClass: failoverReplicaInstanceDetails.DBInstances[0].DBInstanceClass,
-                        DBSubnetGroupName: rdsConfig.acitve_configurations.subnet_group_name,
+                        DBSubnetGroupName: rdsConfig.active_configurations.subnet_group_name,
                         VpcSecurityGroupIds: rdsConfig.active_configurations.security_group_ids,
                         OptionGroupName: failoverReplicaInstanceDetails.DBInstances[0].OptionGroupMemberships[0].OptionGroupName
                     };
