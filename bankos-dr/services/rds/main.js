@@ -340,36 +340,39 @@ const processRds = async (environmentConfig) => {
                 }
             } 
             else {
-                let getReplicaInstanceDetailsparams = { DBInstanceIdentifier: rdsConfig.active_configurations.replica_configuration.identifer }
-                let dbInstaceDetails = await checkIfRdsExists(activeRdsClient, getReplicaInstanceDetailsparams)
-                if (rdsConfig.active_configurations.replica_configuration && 
-                    rdsConfig.active_configurations.replica_configuration.identifier && dbInstaceDetails) {
-                    
-                    custom_logging(chalk.yellow(`Active configuration contains replica information. Creating replicas in failover region first...`));
-                    try {
-                        custom_logging(chalk.green(`Creating replica ${rdsConfig.failover_configurations.identifier} in ${environmentConfig.failover_region}`));
-                        
-                        const dbInstanceDetails = await describeDBInstances(activeRdsClient, rdsConfig.active_configurations.identifier);
-                        const { Account: accountId} = await sts.getCallerIdentity({}).promise();
-                        
-                        const createReplicaParams = {
-                            DBInstanceIdentifier: rdsConfig.failover_configurations.identifier,
-                            SourceDBInstanceIdentifier: `arn:aws:rds:${environmentConfig.active_region}:${accountId}:db:${rdsConfig.active_configurations.identifier}`,
-                            DBInstanceClass: dbInstanceDetails.DBInstances[0].DBInstanceClass,
-                            DBSubnetGroupName: rdsConfig.failover_configurations.subnet_group_name,
-                            VpcSecurityGroupIds: rdsConfig.failover_configurations.security_group_ids
-                        };
-                        
-                        if (rdsConfig.failover_configurations.hasOwnProperty("kms_key_id") && 
-                            rdsConfig.failover_configurations.kms_key_id !== "") {
-                            createReplicaParams['KmsKeyId'] = rdsConfig.failover_configurations.kms_key_id;
+                if (rdsConfig.active_configurations.replica_configuration && rdsConfig.active_configurations.replica_configuration.identifier) {
+                    let getFailoverInstanceDetailsparams = { DBInstanceIdentifier: rdsConfig.failover_configurations.identifer }
+                    let failoverdbInstaceDetails = await checkIfRdsExists(failoverRdsClient, getFailoverInstanceDetailsparams)
+                    if (!failoverdbInstaceDetails){
+                        custom_logging(chalk.yellow(`${rdsConfig.failover_configurations.identifer} does not exist, creating the replica first...`));
+                        try {
+                            custom_logging(chalk.green(`Creating replica ${rdsConfig.failover_configurations.identifier} in ${environmentConfig.failover_region}`));
+                            
+                            const dbInstanceDetails = await describeDBInstances(activeRdsClient, rdsConfig.active_configurations.identifier);
+                            const { Account: accountId} = await sts.getCallerIdentity({}).promise();
+                            
+                            const createReplicaParams = {
+                                DBInstanceIdentifier: rdsConfig.failover_configurations.identifier,
+                                SourceDBInstanceIdentifier: `arn:aws:rds:${environmentConfig.active_region}:${accountId}:db:${rdsConfig.active_configurations.identifier}`,
+                                DBInstanceClass: dbInstanceDetails.DBInstances[0].DBInstanceClass,
+                                DBSubnetGroupName: rdsConfig.failover_configurations.subnet_group_name,
+                                VpcSecurityGroupIds: rdsConfig.failover_configurations.security_group_ids
+                            };
+                            
+                            if (rdsConfig.failover_configurations.hasOwnProperty("kms_key_id") && 
+                                rdsConfig.failover_configurations.kms_key_id !== "") {
+                                createReplicaParams['KmsKeyId'] = rdsConfig.failover_configurations.kms_key_id;
+                            }
+                            
+                            await createReadReplica(failoverRdsClient, createReplicaParams);
+                            custom_logging(chalk.green(`Successfully created replica in ${environmentConfig.failover_region}`));
+                        } catch (error) {
+                            custom_logging(chalk.red(`Error creating replica in failover region: ${error.message}`));
+                            throw error;
                         }
-                        
-                        await createReadReplica(failoverRdsClient, createReplicaParams);
-                        custom_logging(chalk.green(`Successfully created replica in ${environmentConfig.failover_region}`));
-                    } catch (error) {
-                        custom_logging(chalk.red(`Error creating replica in failover region: ${error.message}`));
-                        throw error;
+                    }
+                    else {
+                        custom_logging(chalk.green(`${rdsConfig.failover_configurations.identifer} exist, moving on to promote it...`));
                     }
                 }
                 custom_logging(`Promoting ${environmentConfig.failover_region}'s ${rdsConfig.failover_configurations.identifier} to primary`);
@@ -402,6 +405,24 @@ const processRds = async (environmentConfig) => {
                 
                 custom_logging(`Registering ${rdsConfig.failover_configurations.identifier} with proxy ${rdsConfig.failover_configurations.proxy_name} in ${environmentConfig.failover_region}`);
                 await updateProxyTargets(failoverRdsClient, rdsConfig.failover_configurations.proxy_name, rdsConfig.failover_configurations.identifier);
+
+                if(rdsConfig.active_configurations.replica_configuration && rdsConfig.active_configurations.replica_configuration.identifier) {
+                    custom_logging(chalk.green(`${environmentConfig.active_region} primary instance has a replica, creating read replica for this instance as well...`))
+                    const promotedInstanceDetails = await describeDBInstances(failoverRdsClient, rdsConfig.failover_configurations.identifier);
+                    const { Account: accountId} = await sts.getCallerIdentity({}).promise();
+                            
+                    const createReplicaOfPromotedFailoverParams = {
+                        DBInstanceIdentifier: rdsConfig.failover_configurations.identifier,
+                        SourceDBInstanceIdentifier: `arn:aws:rds:${environmentConfig.active_region}:${accountId}:db:${rdsConfig.active_configurations.identifier}`,
+                        DBInstanceClass: promotedInstanceDetails.DBInstances[0].DBInstanceClass,
+                        DBSubnetGroupName: rdsConfig.failover_configurations.subnet_group_name,
+                        VpcSecurityGroupIds: rdsConfig.failover_configurations.security_group_ids,
+                        OptionGroupName: promotedInstanceDetails.DBInstances[0].OptionGroupMemberships[0].OptionGroupName
+                    };
+                    await createReadReplica(failoverRdsClient, createReplicaOfPromotedFailoverParams);
+                    custom_logging(chalk.green(`Successfully created replica in ${environmentConfig.failover_region}`));
+                }
+                
 
                 if (global.PROCESS_CURRENT_ENVIRONMENT) {
                     let renamedActiveInstanceId = await modifyDBInstanceIdentifier(activeRdsClient, rdsConfig.active_configurations);
