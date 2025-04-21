@@ -252,7 +252,6 @@ const processRds = async (environmentConfig) => {
                     }
                 }
                 
-                dbInstanceDetails = await checkIfRdsExists(activeRdsClient, getDbInstanceDetailsparams);
                 if (!dbInstanceDetails || dbInstanceDetails.DBInstances.length === 0) {
                     const failoverDbDetails = await describeDBInstances(failoverRdsClient, rdsConfig.failover_configurations.identifier);
                     const { Account: accountId } = await sts.getCallerIdentity({}).promise();
@@ -313,11 +312,11 @@ const processRds = async (environmentConfig) => {
                     const { Account: accountId} = await sts.getCallerIdentity({}).promise();
                             
                     const createReplicaOfPromotedActiveParams = {
-                        DBInstanceIdentifier: rdsConfig.failover_configurations.replica_configuration.identifier,
+                        DBInstanceIdentifier: rdsConfig.active_configurations.replica_configuration.identifier,
                         SourceDBInstanceIdentifier: `arn:aws:rds:${environmentConfig.failover_region}:${accountId}:db:${rdsConfig.failover_configurations.identifier}`,
                         DBInstanceClass: failoverReplicaInstanceDetails.DBInstances[0].DBInstanceClass,
-                        DBSubnetGroupName: rdsConfig.failover_configurations.subnet_group_name,
-                        VpcSecurityGroupIds: rdsConfig.failover_configurations.security_group_ids,
+                        DBSubnetGroupName: rdsConfig.acitve_configurations.subnet_group_name,
+                        VpcSecurityGroupIds: rdsConfig.active_configurations.security_group_ids,
                         OptionGroupName: failoverReplicaInstanceDetails.DBInstances[0].OptionGroupMemberships[0].OptionGroupName
                     };
                     await createReadReplica(activeRdsClient, createReplicaOfPromotedActiveParams);
