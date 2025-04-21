@@ -306,6 +306,23 @@ const processRds = async (environmentConfig) => {
                 custom_logging(`Registering ${rdsConfig.active_configurations.identifier} with proxy ${rdsConfig.active_configurations.proxy_name} in ${environmentConfig.active_region}`);
                 
                 await updateProxyTargets(activeRdsClient, rdsConfig.active_configurations.proxy_name, rdsConfig.active_configurations.identifier);
+                
+                if(rdsConfig.failover_configurations.replica_configuration && rdsConfig.failover_configurations.replica_configuration.identifier) {
+                    custom_logging(chalk.green(`${environmentConfig.failover_region} primary instance has a replica, creating read replica for this instance as well...`))
+                    const failoverReplicaInstanceDetails = await describeDBInstances(failoverRdsClient, rdsConfig.failover_configurations.replica_configuration.identifier);
+                    const { Account: accountId} = await sts.getCallerIdentity({}).promise();
+                            
+                    const createReplicaOfPromotedActiveParams = {
+                        DBInstanceIdentifier: rdsConfig.failover_configurations.replica_configuration.identifier,
+                        SourceDBInstanceIdentifier: `arn:aws:rds:${environmentConfig.failover_region}:${accountId}:db:${rdsConfig.failover_configurations.identifier}`,
+                        DBInstanceClass: failoverReplicaInstanceDetails.DBInstances[0].DBInstanceClass,
+                        DBSubnetGroupName: rdsConfig.failover_configurations.subnet_group_name,
+                        VpcSecurityGroupIds: rdsConfig.failover_configurations.security_group_ids,
+                        OptionGroupName: failoverReplicaInstanceDetails.DBInstances[0].OptionGroupMemberships[0].OptionGroupName
+                    };
+                    await createReadReplica(activeRdsClient, createReplicaOfPromotedActiveParams);
+                    custom_logging(chalk.green(`Successfully created replica in ${environmentConfig.active_region}`));
+                }
 
                 if (global.PROCESS_CURRENT_ENVIRONMENT) {
                     let renamedActiveInstanceId = await modifyDBInstanceIdentifier(failoverRdsClient, rdsConfig.failover_configurations);
