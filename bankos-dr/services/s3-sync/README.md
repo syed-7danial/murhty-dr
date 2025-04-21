@@ -41,21 +41,6 @@ Target S3 bucket (Failover) — The bucket that will handle events after switchi
 ### Actions performed:
 The Target S3 bucket is synced with the source S3 bucket using AWS CLI (Make sure it is already installed)
 
-Fetch event notifications from the Active S3 bucket.
-
-Update ARNs inside event notifications to match the 
-
-Failover region resources (e.g., Lambda ARNs, SNS topics, SQS ARNs).
-
-Apply updated event notification configuration to the Failover S3 bucket.
-
-If --processCurrentEnvironment is enabled:
-Remove event notifications from the Active S3 bucket to prevent duplicate triggers.
-This ensures that:
-
-Failover S3 bucket becomes active and starts triggering events.
-
-Active S3 bucket is disabled, preventing conflicts or duplicate events.
 ### Note:
 Only the event notifications specified in the configuration file are modified.
 
@@ -72,23 +57,6 @@ Target S3 bucket (Active) — The bucket to restore as primary.
 
 ### Actions performed:
 The Target S3 bucket is synced with the source S3 bucket using AWS CLI (Make sure it is already installed)
-
-Fetch event notifications from the Failover S3 bucket.
-
-Update ARNs inside event notifications to match the 
-Active region resources.
-
-Apply updated event notification configuration to the 
-Active S3 bucket.
-
-If --processCurrentEnvironment is enabled:
-Remove event notifications from the Failover S3 bucket.
-
-This ensures that:
-
-Active S3 bucket is restored to handle event triggers.
-
-Failover S3 bucket is disabled, preventing conflicting triggers.
 
 ### Note:
 Only event notifications listed in the configuration are affected.

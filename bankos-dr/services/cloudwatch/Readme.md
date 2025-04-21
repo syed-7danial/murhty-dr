@@ -1,7 +1,7 @@
 # Cloudwatch Switching
 
 ## Overview
-This script (run-cloudwatch.js) is designed to automate the switching of lambda concurrency and eventbridge rules . It ensures that during a failover event or environment restoration, Lambda concurrency is set to 0 and eventbridge rules are turned off for the correct environment (Active or Failover).
+This script (main.js) is designed to automate the switching of lambda concurrency and eventbridge rules . It ensures that during a failover event or environment restoration, Lambda concurrency is set to 0 and eventbridge rules are turned off for the correct environment (Active or Failover).
 
 The script also supports a dry-run mode for safe testing and a flag to decide whether to process the current environment, both of which are dynamically controlled via the Jenkins pipeline (Jenkinsfile).
 
@@ -9,7 +9,7 @@ The script also supports a dry-run mode for safe testing and a flag to decide wh
 
 ## How It Works
 Configuration Check
-Before execution, run-cloudwatch.js performs the following checks:
+Before execution, main.js performs the following checks:
 
 ## Multi-Client Handling
 

@@ -65,6 +65,8 @@ const mainFunction = async () => {
     .parse(process.argv);
     
     const options = program.opts();
+
+    global.SLEEP_TIME = 1000;
     
     if (options.dryRun) {
         global.DRY_RUN = true;

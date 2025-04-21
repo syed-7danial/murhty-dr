@@ -1,7 +1,7 @@
 # VPN Endpoint Route Switching
 
 ## Overview
-This script (run-vpn.js) is designed to automate the switching of IP routes between Active and Failover VPN endpoints across AWS regions. It ensures that IP routes are properly transferred between environments during failover events or environment restoration.
+This script (main.js) is designed to automate the switching of IP routes between Active and Failover VPN endpoints across AWS regions. It ensures that IP routes are properly transferred between environments during failover events or environment restoration.
 
 The script dynamically determines whether to perform actual changes or simulate them based on environment variables passed through the Jenkins pipeline (Jenkinsfile).
 

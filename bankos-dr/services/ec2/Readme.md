@@ -1,7 +1,7 @@
 # EC2 Instance Switching
 
 ## Overview
-This script (run-ec2-instance.js) is designed to automate the stopping and starting  of EC2 instance between Active and Failover EC2 across AWS regions. It ensures that ec2 instances are properly stopped between environments during failover events or environment restoration.
+This script (main.js) is designed to automate the stopping and starting  of EC2 instance between Active and Failover EC2 across AWS regions. It ensures that ec2 instances are properly stopped between environments during failover events or environment restoration.
 
 The script dynamically determines whether to perform actual changes or simulate them based on environment variables passed through the Jenkins pipeline (Jenkinsfile).
 
@@ -32,7 +32,7 @@ For each client in the list:
 
 ## How It Works
 ### Configuration Check
-Before execution, run-ec2-instance.js checks:
+Before execution, main.js checks:
 
 Whether DRY_RUN mode is enabled (to simulate actions without applying changes).
 Whether to process the current environment alongside the switching action.

@@ -70,6 +70,7 @@ const mainFunction = async () => {
     .parse(process.argv);
 
   const options = program.opts();
+  global.SLEEP_TIME = 1000;
   global.dryRun = options.dryRun || false;
 
   if (global.dryRun) {

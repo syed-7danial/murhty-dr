@@ -9,7 +9,6 @@ The script also supports:
 Dry-run mode for safe testing and validation.
 
 Option to process the current environment, dynamically controlled via Jenkins pipeline (Jenkinsfile).
-
 ## How It Works
 ### Configuration Check
 Before execution, run-s3.js performs the following checks:
@@ -33,8 +32,6 @@ Source S3 bucket (Active) — The bucket currently handling events.
 Target S3 bucket (Failover) — The bucket that will handle events after switching.
 
 ### Actions performed:
-The Target S3 bucket is synced with the source S3 bucket using AWS CLI (Make sure it is already installed)
-
 Fetch event notifications from the Active S3 bucket.
 
 Update ARNs inside event notifications to match the 
@@ -65,7 +62,6 @@ Source S3 bucket (Failover) — The current active bucket.
 Target S3 bucket (Active) — The bucket to restore as primary.
 
 ### Actions performed:
-The Target S3 bucket is synced with the source S3 bucket using AWS CLI (Make sure it is already installed)
 
 Fetch event notifications from the Failover S3 bucket.
 

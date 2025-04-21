@@ -3,8 +3,8 @@
   "failover_region": "us-east-2",
   "buckets": [
     {
-      "active_bucket": "danial-test-1",
-      "failover_bucket": "danial-test-2"
+      "active_bucket": "dani-test-1",
+      "failover_bucket": "dani-test-2"
     }
   ]
 }

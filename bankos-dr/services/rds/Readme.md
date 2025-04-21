@@ -1,7 +1,7 @@
 # RDS Switching
 
 ## Overview
-This script (run-rds.js) is designed to automate the switching of RDS instances between Active and Failover environments.
+This script (main.js) is designed to automate the switching of RDS instances between Active and Failover environments.
 
 It ensures that during a failover event or environment restoration, RDS instances are promoted, replicated, or cleaned up according to the intended environment (Active or Failover).
 
@@ -10,7 +10,7 @@ The script also supports:
 Option to process the current environment is controlled via the Jenkins pipeline (Jenkinsfile).
 ## How It Works
 ### Configuration Check
-Before execution, run-rds.js performs the following checks:
+Before execution, main.js performs the following checks:
 
 ## Multi-Client Handling
 

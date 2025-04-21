@@ -91,7 +91,7 @@ const copyS3EventNotifications = async (s3Settings, processCurrentEnv) => {
       const currentRegion = s3Settings.switching_to === "ACTIVE" ? s3Settings.failover_region : s3Settings.active_region;
       const currentBucket = s3Settings.switching_to === "ACTIVE" ? trigger.failover_bucket : trigger.active_bucket;
       const s3Client = new AWS.S3({ region: currentRegion });
-      
+
       custom_logging(chalk.yellow(`Deleting event notifications from ${currentBucket} in ${currentRegion}`));
       
       if (!global.DRY_RUN) {

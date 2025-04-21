@@ -114,8 +114,10 @@ const mainFunction = async () => {
     program
     .version('0.0.1')
     .option('-dr --dryRun', "Dry run the process")
-
+    
     .parse(process.argv);
+
+    global.SLEEP_TIME = 1000;
     
     const options = program.opts();
     

@@ -24,7 +24,7 @@ const checkIfRdsExists = async (rdsClient, getDbInstanceDetailsparams) => {
     }
     catch(error) {
         if (error.code == "DBInstanceNotFound")
-            custom_logging(chalk.red(`Database ${getDbInstanceDetailsparams.DBInstanceIdentifier} has not been found. Proceeding...`));
+            custom_logging(chalk.red("Error: ") + error.message);
     }
     return activeDbInstanceDetails
 
@@ -35,7 +35,7 @@ const createReadReplica = async (rdsClient, createReadReplicaParams) => {
     let response = await rdsClient.createDBInstanceReadReplica(createReadReplicaParams).promise()  
     while(response.DBInstance.DBInstanceStatus != "available") {
         custom_logging(chalk.yellow(`Waiting for ${createReadReplicaParams.DBInstanceIdentifier} db instance to be in available state...`));
-        await new Promise(resolve => setTimeout(resolve, 110000));
+        await new Promise(resolve => setTimeout(resolve, global.SLEEP_TIME * 60));
         response = await rdsClient.describeDBInstances({DBInstanceIdentifier: createReadReplicaParams.DBInstanceIdentifier}).promise()
         response = {
             "DBInstance" : response.DBInstances[0]

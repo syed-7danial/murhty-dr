@@ -228,22 +228,18 @@ const processRds = async (environmentConfig) => {
                 let currentDateTime = new Date().toISOString();
                 currentDateTime = currentDateTime.replaceAll("T", "-").replaceAll(":", "-").split(".")[0]
 
-                // First, check if the DB exists and if it's a read replica
                 if (dbInstanceDetails && dbInstanceDetails.DBInstances.length > 0) {
                     const dbInstance = dbInstanceDetails.DBInstances[0];
                     
-                    // Check if it's a read replica
                     if (dbInstance.ReadReplicaSourceDBInstanceIdentifier) {
                         custom_logging(chalk.yellow(`${rdsConfig.active_configurations.identifier} is already a read replica in ${environmentConfig.active_region}. Skipping deletion and creation.`));
                         
-                        // Check if the source of the replica is the failover instance we want
                         if (dbInstance.ReadReplicaSourceDBInstanceIdentifier.includes(rdsConfig.failover_configurations.identifier)) {
                             custom_logging(chalk.green(`The read replica is already replicating from the correct source. Proceeding with promotion.`));
                         } else {
                             custom_logging(chalk.yellow(`Warning: The read replica is replicating from ${dbInstance.ReadReplicaSourceDBInstanceIdentifier}, which differs from the expected source ${rdsConfig.failover_configurations.identifier}.`));
                         }
                     } else if (rdsConfig.force_delete) {
-                        // Only delete if it's not a read replica and force_delete is true
                         var deleteDbInstanceparams = {
                             DBInstanceIdentifier: rdsConfig.active_configurations.identifier,
                             FinalDBSnapshotIdentifier: rdsConfig.active_configurations.identifier + currentDateTime,
@@ -256,7 +252,6 @@ const processRds = async (environmentConfig) => {
                     }
                 }
                 
-                // If the DB doesn't exist or was deleted, create a new read replica
                 dbInstanceDetails = await checkIfRdsExists(activeRdsClient, getDbInstanceDetailsparams);
                 if (!dbInstanceDetails || dbInstanceDetails.DBInstances.length === 0) {
                     const failoverDbDetails = await describeDBInstances(failoverRdsClient, rdsConfig.failover_configurations.identifier);
@@ -319,6 +314,7 @@ const processRds = async (environmentConfig) => {
 
                     let oldDbInstanceDetails = await describeDBInstances(failoverRdsClient, renamedActiveInstanceId);
                     const oldDbInstance = oldDbInstanceDetails.DBInstances[0];
+                    const { Account: accountId } = await sts.getCallerIdentity({}).promise();
 
                     let createReadReplicaParams = {
                         DBInstanceIdentifier: rdsConfig.active_configurations.identifier,
