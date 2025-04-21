@@ -4,13 +4,13 @@
     "rds":[
         {
             "active_configurations": {
-                "identifier": "database-3",
+                "identifier": "database-4",
                 "kms_key_id": "40a25d87-c7cd-4162-b7b8-f4fef85b53a5",
                 "subnet_group_name":"default-vpc-0022e4054c4a169bd",
                 "security_group_ids":["sg-0e788bc9b9e5d3c1b"],
                 "proxy_name": "proxy-1745263213772-database-1",
                 "replica_configuration": {
-                    "identifier": "database-3-readonly"
+                    "identifier": "database-4-readonly"
                 }
             },
             "failover_configurations": {
