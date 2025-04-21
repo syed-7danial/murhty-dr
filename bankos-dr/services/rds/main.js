@@ -412,8 +412,8 @@ const processRds = async (environmentConfig) => {
                     const { Account: accountId} = await sts.getCallerIdentity({}).promise();
                             
                     const createReplicaOfPromotedFailoverParams = {
-                        DBInstanceIdentifier: rdsConfig.failover_configurations.identifier,
-                        SourceDBInstanceIdentifier: `arn:aws:rds:${environmentConfig.active_region}:${accountId}:db:${rdsConfig.active_configurations.identifier}`,
+                        DBInstanceIdentifier: rdsConfig.failover_configurations.replica_configuration.identifier,
+                        SourceDBInstanceIdentifier: `arn:aws:rds:${environmentConfig.failover_region}:${accountId}:db:${rdsConfig.failover_configurations.identifier}`,
                         DBInstanceClass: promotedInstanceDetails.DBInstances[0].DBInstanceClass,
                         DBSubnetGroupName: rdsConfig.failover_configurations.subnet_group_name,
                         VpcSecurityGroupIds: rdsConfig.failover_configurations.security_group_ids,
