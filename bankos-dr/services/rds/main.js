@@ -408,16 +408,16 @@ const processRds = async (environmentConfig) => {
 
                 if(rdsConfig.active_configurations.replica_configuration && rdsConfig.active_configurations.replica_configuration.identifier) {
                     custom_logging(chalk.green(`${environmentConfig.active_region} primary instance has a replica, creating read replica for this instance as well...`))
-                    const promotedInstanceDetails = await describeDBInstances(failoverRdsClient, rdsConfig.failover_configurations.identifier);
+                    const activeReplicaInstanceDetails = await describeDBInstances(activeRdsClient, rdsConfig.active_configurations.identifier);
                     const { Account: accountId} = await sts.getCallerIdentity({}).promise();
                             
                     const createReplicaOfPromotedFailoverParams = {
                         DBInstanceIdentifier: rdsConfig.failover_configurations.replica_configuration.identifier,
                         SourceDBInstanceIdentifier: `arn:aws:rds:${environmentConfig.failover_region}:${accountId}:db:${rdsConfig.failover_configurations.identifier}`,
-                        DBInstanceClass: promotedInstanceDetails.DBInstances[0].DBInstanceClass,
+                        DBInstanceClass: activeReplicaInstanceDetails.DBInstances[0].DBInstanceClass,
                         DBSubnetGroupName: rdsConfig.failover_configurations.subnet_group_name,
                         VpcSecurityGroupIds: rdsConfig.failover_configurations.security_group_ids,
-                        OptionGroupName: promotedInstanceDetails.DBInstances[0].OptionGroupMemberships[0].OptionGroupName
+                        OptionGroupName: activeReplicaInstanceDetails.DBInstances[0].OptionGroupMemberships[0].OptionGroupName
                     };
                     await createReadReplica(failoverRdsClient, createReplicaOfPromotedFailoverParams);
                     custom_logging(chalk.green(`Successfully created replica in ${environmentConfig.failover_region}`));
