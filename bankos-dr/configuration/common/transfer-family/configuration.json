@@ -1,0 +1,18 @@
+{
+    "active_region": "us-east-1",
+    "failover_region": "us-east-2",
+    "servers" : [
+        {
+            "active_server": {
+                "serverId": "s-876255c716964a1aa",
+                "bucket": "XYZ",
+                "iamRole": "XYZ"
+            },
+            "failover_server": {
+                "serverId": "s-876255c716964a1aa",
+                "bucket": "XYZ",
+                "iamRole": "XYZ"
+            }
+        }
+    ]
+}
