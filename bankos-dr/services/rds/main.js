@@ -319,6 +319,9 @@ const processRds = async (environmentConfig) => {
                         VpcSecurityGroupIds: rdsConfig.active_configurations.security_group_ids,
                         OptionGroupName: failoverReplicaInstanceDetails.DBInstances[0].OptionGroupMemberships[0].OptionGroupName
                     };
+                    if (rdsConfig.active_configurations.hasOwnProperty("kms_key_id") && rdsConfig.active_configurations.kms_key_id != "")
+                        createReplicaOfPromotedActiveParams['KmsKeyId'] = rdsConfig.active_configurations.kms_key_id
+
                     await createReadReplica(activeRdsClient, createReplicaOfPromotedActiveParams);
                     custom_logging(chalk.green(`Successfully created replica in ${environmentConfig.active_region}`));
                 }
@@ -342,7 +345,7 @@ const processRds = async (environmentConfig) => {
                         OptionGroupName: oldDbInstance.OptionGroupMemberships[0].OptionGroupName
                     };
 
-                    if (rdsConfig.failover_configurations.hasOwnProperty("kms_key_id") && rdsConfig.active_configurations.kms_key_id != "")
+                    if (rdsConfig.failover_configurations.hasOwnProperty("kms_key_id") && rdsConfig.failover_configurations.kms_key_id != "")
                         createReadReplicaParams['KmsKeyId'] = rdsConfig.failover_configurations.kms_key_id
 
                     custom_logging(`Creating read-replica of ${rdsConfig.active_configurations.identifier} in ${environmentConfig.failover_region}`);
@@ -435,6 +438,9 @@ const processRds = async (environmentConfig) => {
                         VpcSecurityGroupIds: rdsConfig.failover_configurations.security_group_ids,
                         OptionGroupName: activeReplicaInstanceDetails.DBInstances[0].OptionGroupMemberships[0].OptionGroupName
                     };
+                    if (rdsConfig.failover_configurations.hasOwnProperty("kms_key_id") && rdsConfig.failover_configurations.kms_key_id != "")
+                        createReplicaOfPromotedFailoverParams['KmsKeyId'] = rdsConfig.failover_configurations.kms_key_id;
+
                     await createReadReplica(failoverRdsClient, createReplicaOfPromotedFailoverParams);
                     custom_logging(chalk.green(`Successfully created replica in ${environmentConfig.failover_region}`));
                 }
