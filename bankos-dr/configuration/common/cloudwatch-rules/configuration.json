@@ -4,11 +4,11 @@
   "excluded_rules": [
     {
       "bus_name": "default",
-      "rule_names": ["MaintenanceRule", "MonitoringRule"]
+      "rule_names": ["adding-users-test-danial", "codepipeline-toobar-main-197941-rule"]
     },
     {
-      "bus_name": "custom-bus",
-      "rule_names": ["ArchiveRule"]
+      "bus_name": "custom-event-bus-dev",
+      "rule_names": ["invokeLambdaOnConfigChange-dev"]
     }
   ]
 }
