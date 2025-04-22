@@ -297,7 +297,6 @@ const processRds = async (environmentConfig) => {
                         DBSubnetGroupName: rdsConfig.active_configurations.subnet_group_name,
                         VpcSecurityGroupIds: rdsConfig.active_configurations.security_group_ids,
                         OptionGroupName: rdsConfig.active_configurations.option_group_name,
-                        DBParameterGroupName: rdsConfig.active_configurations.db_parameter_group_name,
                         MultiAZ: activeInstanceDetails.DBInstances[0].MultiAZ,
                         AutoMinorVersionUpgrade: activeInstanceDetails.DBInstances[0].AutoMinorVersionUpgrade,
                         EnableIAMDatabaseAuthentication: activeInstanceDetails.DBInstances[0].IAMDatabaseAuthenticationEnabled,
