@@ -67,43 +67,53 @@ const getTransferUsers = async (transferClient, serverId) => {
 };
 
 // Function to create a user on Transfer Family server
+// Function to create a user on Transfer Family server
 const createTransferUser = async (transferClient, serverId, userData) => {
-  try {
-    const params = {
-      ServerId: serverId,
-      HomeDirectory: userData.HomeDirectory,
-      HomeDirectoryType: userData.HomeDirectoryType,
-      Role: userData.Role,
-      UserName: userData.UserName
-    };
-    
-    // Add HomeDirectoryMappings if present
-    if (userData.HomeDirectoryMappings && userData.HomeDirectoryMappings.length > 0) {
-      params.HomeDirectoryMappings = userData.HomeDirectoryMappings;
+    try {
+      const params = {
+        ServerId: serverId,
+        HomeDirectory: userData.HomeDirectory,
+        HomeDirectoryType: userData.HomeDirectoryType,
+        Role: userData.Role,
+        UserName: userData.UserName
+      };
+      
+      // Add HomeDirectoryMappings if present
+      if (userData.HomeDirectoryMappings && userData.HomeDirectoryMappings.length > 0) {
+        params.HomeDirectoryMappings = userData.HomeDirectoryMappings;
+      }
+      
+      // Add Policy if present
+      if (userData.Policy) {
+        params.Policy = userData.Policy;
+      }
+      
+      // Add PosixProfile if present
+      if (userData.PosixProfile) {
+        params.PosixProfile = userData.PosixProfile;
+      }
+      
+      // Create the user first without SSH keys
+      await transferClient.createUser(params).promise();
+      custom_logging(chalk.green(`Created user ${userData.UserName} on server ${serverId}`));
+      
+      // Add SSH public keys if present
+      if (userData.SshPublicKeys && userData.SshPublicKeys.length > 0) {
+        for (const sshKey of userData.SshPublicKeys) {
+          await transferClient.importSshPublicKey({
+            ServerId: serverId,
+            UserName: userData.UserName,
+            SshPublicKeyBody: sshKey
+          }).promise();
+          custom_logging(chalk.green(`Added SSH public key for user ${userData.UserName}`));
+        }
+      }
+      
+      return true;
+    } catch (error) {
+      custom_logging(chalk.red(`Error creating user ${userData.UserName} on server ${serverId}: ${error.message}`));
+      throw error;
     }
-    
-    // Add Policy if present
-    if (userData.Policy) {
-      params.Policy = userData.Policy;
-    }
-    
-    // Add PosixProfile if present
-    if (userData.PosixProfile) {
-      params.PosixProfile = userData.PosixProfile;
-    }
-    
-    // Add SshPublicKeys if present
-    if (userData.SshPublicKeys && userData.SshPublicKeys.length > 0) {
-      params.SshPublicKeyBody = userData.SshPublicKeys;
-    }
-    
-    await transferClient.createUser(params).promise();
-    custom_logging(chalk.green(`Created user ${userData.UserName} on server ${serverId}`));
-    return true;
-  } catch (error) {
-    custom_logging(chalk.red(`Error creating user ${userData.UserName} on server ${serverId}: ${error.message}`));
-    throw error;
-  }
 };
 
 const replicateTransferUsers = async (transferClient, serverId, users) => {
@@ -160,7 +170,6 @@ const processTransferUserReplication = async (config) => {
           custom_logging(chalk.yellow(`[DRY RUN] Would replicate users from ${failoverServerConfig.serverId} to ${activeServerConfig.serverId}`));
         } else {
           const users = await getTransferUsers(failoverTransfer, failoverServerConfig.serverId);
-          custom_logging(chalk.green(`Users: ${users}`));
           await replicateTransferUsers(activeTransfer, activeServerConfig.serverId, users);
         }
       } else {
