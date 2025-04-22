@@ -322,7 +322,7 @@ const processRds = async (environmentConfig) => {
                     const { Account: accountId } = await sts.getCallerIdentity({}).promise();
 
                     let createReadReplicaParams = {
-                        DBInstanceIdentifier: rdsConfig.active_configurations.identifier,
+                        DBInstanceIdentifier: rdsConfig.failover_configurations.identifier,
                         SourceDBInstanceIdentifier: `arn:aws:rds:${environmentConfig.active_region}:${accountId}:db:${rdsConfig.active_configurations.identifier}`,
                         SourceRegion: environmentConfig.active_region,
                         DBInstanceClass: oldDbInstance.DBInstanceClass,
@@ -469,7 +469,7 @@ const processRds = async (environmentConfig) => {
                     const { Account: accountId } = await sts.getCallerIdentity({}).promise();
                     
                     let createFailoverReadReplicaParams = {
-                        DBInstanceIdentifier: rdsConfig.failover_configurations.identifier,
+                        DBInstanceIdentifier: rdsConfig.active_configurations.identifier,
                         SourceDBInstanceIdentifier: `arn:aws:rds:${environmentConfig.failover_region}:${accountId}:db:${rdsConfig.failover_configurations.identifier}`,
                         SourceRegion: environmentConfig.failover_region,
                         DBInstanceClass: oldDbInstance.DBInstanceClass,
