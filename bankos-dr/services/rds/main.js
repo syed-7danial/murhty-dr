@@ -372,7 +372,7 @@ const processRds = async (environmentConfig) => {
                             
                             const createReplicaParams = {
                                 DBInstanceIdentifier: rdsConfig.failover_configurations.identifier,
-                                SourceDBInstanceIdentifier: `arn:aws:rds:${environmentConfig.failover_region}:${accountId}:db:${rdsConfig.failover_configurations.identifier}`,
+                                SourceDBInstanceIdentifier: `arn:aws:rds:${environmentConfig.active_region}:${accountId}:db:${rdsConfig.active_configurations.identifier}`,
                                 DBInstanceClass: dbInstanceDetails.DBInstances[0].DBInstanceClass,
                                 DBSubnetGroupName: rdsConfig.failover_configurations.subnet_group_name,
                                 VpcSecurityGroupIds: rdsConfig.failover_configurations.security_group_ids
