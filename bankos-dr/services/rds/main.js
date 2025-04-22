@@ -349,7 +349,7 @@ const processRds = async (environmentConfig) => {
                 }
             } 
             else {
-                if (rdsConfig.active_configurations.replica_configuration && rdsConfig.active_configurations.replica_configuration.identifier) {
+                if (rdsConfig.active_configurations.replica_configuration && rdsConfig.active_configurations.replica_configuration.identifier && rdsConfig.failover_configurations && rdsConfig.failover_configurations.identifier) {
                     let getFailoverInstanceDetailsparams = { DBInstanceIdentifier: rdsConfig.failover_configurations.identifier }
                     let failoverdbInstaceDetails = await checkIfRdsExists(failoverRdsClient, getFailoverInstanceDetailsparams)
                     if (!failoverdbInstaceDetails){
