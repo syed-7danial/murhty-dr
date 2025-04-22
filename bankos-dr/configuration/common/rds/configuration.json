@@ -19,7 +19,10 @@
                 "option_group_name": "danial-failover",
                 "db_parameter_group_name": "danial-failover",
                 "security_group_ids":["sg-08973cb6a1d40cf5d"],
-                "proxy_name": "test-2"
+                "proxy_name": "test-2",
+                "replica_configuration": {
+                    "identifier": "danial-failover-3-readonly"
+                }
             }
         }
     ]
