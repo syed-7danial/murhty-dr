@@ -191,7 +191,7 @@ const mainFunction = async () => {
 
   global.SLEEP_TIME = 1000;
   
-  const file = path.resolve(__dirname, '..', '..', 'configuration', process.env.CLIENT_NAME, 'transfer', 'configuration.json');
+  const file = path.resolve(__dirname, '..', '..', 'configuration', process.env.CLIENT_NAME, 'transfer-family', 'configuration.json');
 
   if (!fs.existsSync(file)) {
     custom_logging(chalk.red(`Configuration file not found for client: ${process.env.CLIENT_NAME}`));
