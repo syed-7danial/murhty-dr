@@ -363,7 +363,7 @@ const processRds = async (environmentConfig) => {
                     let getFailoverInstanceDetailsparams = { DBInstanceIdentifier: rdsConfig.failover_configurations.identifier }
                     let failoverdbInstaceDetails = await checkIfRdsExists(failoverRdsClient, getFailoverInstanceDetailsparams)
                     if (!failoverdbInstaceDetails){
-                        custom_logging(chalk.yellow(`${rdsConfig.failover_configurations.identifer} does not exist, creating the replica first...`));
+                        custom_logging(chalk.yellow(`${rdsConfig.failover_configurations.identifier} does not exist, creating the replica first...`));
                         try {
                             custom_logging(chalk.green(`Creating replica ${rdsConfig.failover_configurations.identifier} in ${environmentConfig.failover_region}`));
                             
