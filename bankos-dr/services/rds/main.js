@@ -298,7 +298,6 @@ const processRds = async (environmentConfig) => {
                         DBParameterGroupName: rdsConfig.active_configurations.db_parameter_group_name,
                         MultiAZ: activeInstanceDetails.DBInstances[0].MultiAZ,
                         AutoMinorVersionUpgrade: activeInstanceDetails.DBInstances[0].AutoMinorVersionUpgrade,
-                        IAMDatabaseAuthenticationEnabled: activeInstanceDetails.DBInstances[0].IAMDatabaseAuthenticationEnabled,
                         StorageType: activeInstanceDetails.DBInstances[0].StorageType,
                         CopyTagsToSnapshot: activeInstanceDetails.DBInstances[0].CopyTagsToSnapshot,
                         Iops: activeInstanceDetails.DBInstances[0].Iops
@@ -330,7 +329,6 @@ const processRds = async (environmentConfig) => {
                         DBParameterGroupName: rdsConfig.failover_configurations.db_parameter_group_name,
                         MultiAZ: oldDbInstance.MultiAZ,
                         AutoMinorVersionUpgrade: oldDbInstance.AutoMinorVersionUpgrade,
-                        IAMDatabaseAuthenticationEnabled: oldDbInstance.IAMDatabaseAuthenticationEnabled,
                         StorageType: oldDbInstance.StorageType,
                         CopyTagsToSnapshot: oldDbInstance.CopyTagsToSnapshot,
                         Iops: oldDbInstance.Iops
@@ -444,7 +442,6 @@ const processRds = async (environmentConfig) => {
                         DBParameterGroupName: rdsConfig.failover_configurations.db_parameter_group_name,
                         MultiAZ: failoverInstanceDetails.DBInstances[0].MultiAZ,
                         AutoMinorVersionUpgrade: failoverInstanceDetails.DBInstances[0].AutoMinorVersionUpgrade,
-                        IAMDatabaseAuthenticationEnabled: failoverInstanceDetails.DBInstances[0].IAMDatabaseAuthenticationEnabled,
                         StorageType: failoverInstanceDetails.DBInstances[0].StorageType,
                         CopyTagsToSnapshot: failoverInstanceDetails.DBInstances[0].CopyTagsToSnapshot,
                         Iops: failoverInstanceDetails.DBInstances[0].Iops
@@ -477,7 +474,6 @@ const processRds = async (environmentConfig) => {
                         DBParameterGroupName: rdsConfig.active_configurations.db_parameter_group_name,
                         MultiAZ: oldDbInstance.MultiAZ,
                         AutoMinorVersionUpgrade: oldDbInstance.AutoMinorVersionUpgrade,
-                        IAMDatabaseAuthenticationEnabled: oldDbInstance.IAMDatabaseAuthenticationEnabled,
                         StorageType: oldDbInstance.StorageType,
                         CopyTagsToSnapshot: oldDbInstance.CopyTagsToSnapshot,
                         Iops: oldDbInstance.Iops
