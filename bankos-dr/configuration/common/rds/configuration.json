@@ -13,7 +13,7 @@
                 "proxy_name": "proxy-1745346956280-danial-active"
             },
             "failover_configurations": {
-                "identifier": "danial-failover-2",
+                "identifier": "danial-failover-3",
                 "kms_key_id": "ff9aceb7-a089-4dcd-8aee-9e50e62e7c89",
                 "subnet_group_name":"danial-failover",
                 "option_group_name": "danial-failover",
