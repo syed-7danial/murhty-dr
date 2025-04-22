@@ -307,7 +307,7 @@ const processRds = async (environmentConfig) => {
                 await updateProxyTargets(activeRdsClient, rdsConfig.active_configurations.proxy_name, rdsConfig.active_configurations.identifier);
                 
                 if(rdsConfig.failover_configurations.replica_configuration && rdsConfig.failover_configurations.replica_configuration.identifier) {
-                    custom_logging(chalk.green(`${environmentConfig.failover_region} primary instance has a replica, creating read replica for this instance as well...`))
+                    custom_logging(chalk.green(`${rdsConfig.failover_configurations.identifier} instance has a replica, creating read replica for this instance as well...`))
                     const failoverReplicaInstanceDetails = await describeDBInstances(failoverRdsClient, rdsConfig.failover_configurations.replica_configuration.identifier);
                     const { Account: accountId} = await sts.getCallerIdentity({}).promise();
                             
@@ -426,7 +426,7 @@ const processRds = async (environmentConfig) => {
                 await updateProxyTargets(failoverRdsClient, rdsConfig.failover_configurations.proxy_name, rdsConfig.failover_configurations.identifier);
 
                 if(rdsConfig.active_configurations.replica_configuration && rdsConfig.active_configurations.replica_configuration.identifier) {
-                    custom_logging(chalk.green(`${environmentConfig.active_region} primary instance has a replica, creating read replica for this instance as well...`))
+                    custom_logging(chalk.green(`${rdsConfig.active_configurations.identifier} primary instance has a replica, creating read replica for this instance as well...`))
                     const activeReplicaInstanceDetails = await describeDBInstances(activeRdsClient, rdsConfig.active_configurations.identifier);
                     const { Account: accountId} = await sts.getCallerIdentity({}).promise();
                             
