@@ -28,6 +28,16 @@ const readConfigFile = async () => {
 const processEventBridgeRules = async (config, switchingToActive, processCurrentEnv) => {
   const targetRegion = switchingToActive ? config.active_region : config.failover_region;
   const currentRegion = switchingToActive ? config.failover_region : config.active_region;
+  
+  // Create a function to check if a rule should be excluded
+  const isRuleExcluded = (busName, ruleName) => {
+    if (!config.excluded_rules) return false;
+    
+    const busConfig = config.excluded_rules.find(item => item.bus_name === busName);
+    if (!busConfig) return false;
+    
+    return busConfig.rule_names.includes(ruleName);
+  };
 
   custom_logging(chalk.green(`Starting to enable rules in the target region: ${targetRegion}`));
   try {
@@ -36,6 +46,10 @@ const processEventBridgeRules = async (config, switchingToActive, processCurrent
     for (const bus of targetBuses) {
       const rules = await listRules(targetRegion, bus.Name);
       for (const rule of rules) {
+        if (isRuleExcluded(bus.Name, rule.Name)) {
+          custom_logging(chalk.yellow(`Skipping excluded rule: ${rule.Name} on bus: ${bus.Name}`));
+          continue;
+        }
         await enableRule(targetRegion, rule, bus.Name);
       }
     }
@@ -51,6 +65,10 @@ const processEventBridgeRules = async (config, switchingToActive, processCurrent
       for (const bus of currentBuses) {
         const rules = await listRules(currentRegion, bus.Name);
         for (const rule of rules) {
+          if (isRuleExcluded(bus.Name, rule.Name)) {
+            custom_logging(chalk.yellow(`Skipping excluded rule: ${rule.Name} on bus: ${bus.Name}`));
+            continue;
+          }
           await disableRule(currentRegion, rule, bus.Name);
         }
       }
