@@ -12,7 +12,7 @@
                 "security_group_ids":["sg-0f7f2bdb79f8a89bf"],
                 "proxy_name": "proxy-1745346956280-danial-active",
                 "replica_configuration": {
-                    "identifier": "danial-failover-3-readonly"
+                    "identifier": "danial-active-replica-readonly"
                 }
             },
             "failover_configurations": {
