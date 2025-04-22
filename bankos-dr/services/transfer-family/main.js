@@ -215,7 +215,6 @@ const mainFunction = async () => {
   program
     .version('0.0.1')
     .option('-dr --dryRun', "Dry run the process")
-    .option('-pce --processCurrentEnvironment', "Whether to perform the process on current environment")
     .parse(process.argv);
 
   const options = program.opts();
@@ -237,13 +236,6 @@ const mainFunction = async () => {
     custom_logging(chalk.yellow("DRY RUN is enabled"));
   } else {
     custom_logging(chalk.red("DRY RUN is disabled"));
-  }
-
-  if (options.processCurrentEnvironment) {
-    global.PROCESS_CURRENT_ENVIRONMENT = true;
-    custom_logging(chalk.red("Current environment will be processed"));
-  } else {
-    custom_logging(chalk.yellow("Current environment will not be processed"));
   }
 
   custom_logging(`Switching to ${chalk.green(config.switching_to)} environment`);
