@@ -239,7 +239,7 @@ const processRds = async (environmentConfig) => {
                         } else {
                             custom_logging(chalk.yellow(`Warning: The read replica is replicating from ${dbInstance.ReadReplicaSourceDBInstanceIdentifier}, which differs from the expected source ${rdsConfig.failover_configurations.identifier}.`));
                             throw new Error(`Read replica is not sourced from the expected DB. Aborting.`);
-                        }} 
+                        }
                     }
                 }
                 
