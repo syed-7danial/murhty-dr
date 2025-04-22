@@ -87,25 +87,6 @@ const updateProxyTargets = async (rdsClient, proxyName, newDbInstanceId) => {
     }
 };
 
-const waitForDbInstanceDeletion = async (rdsClient, deleteDbInstanceparams) => {
-    let instanceExists = true;
-    while (instanceExists) {
-        try {
-            await describeDBInstances(rdsClient, deleteDbInstanceparams)
-            custom_logging(chalk.red(`Waiting for ${deleteDbInstanceparams} DB instance to be deleted.`))
-            await new Promise(resolve => setTimeout(resolve, global.SLEEP_TIME * 60));
-        } catch (error) {
-            if (error.code === 'DBInstanceNotFound') {
-                custom_logging(chalk.green(`${deleteDbInstanceparams} DB instance deleted successfully.`))
-                instanceExists = false;
-            } else {
-                custom_logging(chalk.red("Error: An error occurred while waiting for DB deletion"));
-                throw error;
-            }
-        }
-    }
-};
-
 const waitForReplicaPromotionComplete = async (rdsClient, dbInstanceIdentifier) => {
     let promotionNotComplete = true;
     custom_logging(chalk.yellow(`Waiting for ${dbInstanceIdentifier} promotion to complete...`));
