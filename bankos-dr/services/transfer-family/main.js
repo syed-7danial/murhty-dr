@@ -25,45 +25,59 @@ const readAndParseFile = async (file) => {
 };
 
 // Function to get all Transfer Family users from a server
+// Function to get all Transfer Family users from a server
 const getTransferUsers = async (transferClient, serverId) => {
-  custom_logging(chalk.blue(`Getting users from Transfer Family server: ${serverId}`));
-  
-  try {
-    const users = [];
-    let nextToken = null;
+    custom_logging(chalk.blue(`Getting users from Transfer Family server: ${serverId}`));
     
-    do {
-      const params = {
-        ServerId: serverId,
-        MaxResults: 100
-      };
+    try {
+      const users = [];
+      let nextToken = null;
       
-      if (nextToken) {
-        params.NextToken = nextToken;
-      }
-      
-      const response = await transferClient.listUsers(params).promise();
-      
-      const usersList = response.Users || [];
-      
-      for (const userSummary of usersList) {
-        const userDetail = await transferClient.describeUser({
+      do {
+        const params = {
           ServerId: serverId,
-          UserName: userSummary.UserName
-        }).promise();
+          MaxResults: 100
+        };
         
-        users.push(userDetail.User);
-      }
+        if (nextToken) {
+          params.NextToken = nextToken;
+        }
+        
+        const response = await transferClient.listUsers(params).promise();
+        
+        const usersList = response.Users || [];
+        
+        for (const userSummary of usersList) {
+          const userDetail = await transferClient.describeUser({
+            ServerId: serverId,
+            UserName: userSummary.UserName
+          }).promise();
+          
+          // Print detailed user information
+          custom_logging(chalk.cyan(`User details for ${userSummary.UserName}:`));
+          custom_logging(JSON.stringify(userDetail.User, null, 2));
+          
+          // Special logging for SSH keys to see their format
+          if (userDetail.User.SshPublicKeys && userDetail.User.SshPublicKeys.length > 0) {
+            custom_logging(chalk.yellow(`SSH Public Keys for ${userSummary.UserName}:`));
+            userDetail.User.SshPublicKeys.forEach((key, index) => {
+              custom_logging(chalk.yellow(`Key ${index + 1} type: ${typeof key}`));
+              custom_logging(chalk.yellow(`Key ${index + 1} content: ${JSON.stringify(key)}`));
+            });
+          }
+          
+          users.push(userDetail.User);
+        }
+        
+        nextToken = response.NextToken;
+      } while (nextToken);
       
-      nextToken = response.NextToken;
-    } while (nextToken);
-    
-    custom_logging(chalk.green(`Successfully fetched ${users.length} users from server ${serverId}`));
-    return users;
-  } catch (error) {
-    custom_logging(chalk.red(`Error getting users from Transfer Family server ${serverId}: ${error.message}`));
-    throw error;
-  }
+      custom_logging(chalk.green(`Successfully fetched ${users.length} users from server ${serverId}`));
+      return users;
+    } catch (error) {
+      custom_logging(chalk.red(`Error getting users from Transfer Family server ${serverId}: ${error.message}`));
+      throw error;
+    }
 };
 
 // Function to create a user on Transfer Family server
