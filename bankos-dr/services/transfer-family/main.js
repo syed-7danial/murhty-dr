@@ -160,6 +160,7 @@ const processTransferUserReplication = async (config) => {
           custom_logging(chalk.yellow(`[DRY RUN] Would replicate users from ${failoverServerConfig.serverId} to ${activeServerConfig.serverId}`));
         } else {
           const users = await getTransferUsers(failoverTransfer, failoverServerConfig.serverId);
+          custom_logging(chalk.green(`Users: ${users}`));
           await replicateTransferUsers(activeTransfer, activeServerConfig.serverId, users);
         }
       } else {
