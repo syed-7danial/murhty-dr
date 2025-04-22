@@ -1,14 +1,22 @@
 {
   "active_region": "us-west-1",
   "failover_region": "us-west-2",
-  "excluded_rules": [
-    {
-      "bus_name": "default",
-      "rule_names": ["adding-users-test-danial", "codepipeline-toobar-main-197941-rule"]
-    },
-    {
-      "bus_name": "custom-event-bus-dev",
-      "rule_names": ["invokeLambdaOnConfigChange-dev"]
-    }
-  ]
+  "excluded_rules": {
+    "active_region": [
+      {
+        "bus_name": "default",
+        "rule_names": ["codepipeline-rameez-master-134829-rule", "fsl-tst-rule", "junaid-test-rule"]
+      }
+    ],
+    "failover_region": [
+      {
+        "bus_name": "default",
+        "rule_names": ["ab-test", "adding-users-test-danial"]
+      },
+      {
+        "bus_name": "sohaib-datadog-event-bus",
+        "rule_names": ["sohaib-datadog-rule"]
+      }
+    ]
+  }
 }
