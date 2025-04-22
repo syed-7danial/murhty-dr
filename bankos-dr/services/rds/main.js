@@ -24,7 +24,6 @@ AWS.config.update({
 
 const {
     initializeRdsClients,
-    deleteDbInstance,
     createReadReplica,
     promoteReadReplica,
     checkIfRdsExists,
@@ -383,6 +382,17 @@ const processRds = async (environmentConfig) => {
                     }
                     else {
                         custom_logging(chalk.green(`${rdsConfig.failover_configurations.identifier} exist, moving on to promote it...`));
+                        const repInstance = failoverdbInstaceDetails.DBInstances[0];
+                        if (repInstance.ReadReplicaSourceDBInstanceIdentifier) {
+                            custom_logging(chalk.yellow(`${rdsConfig.active_configurations.identifier} is already a read replica in ${environmentConfig.active_region}. Skipping deletion and creation.`));
+                            
+                            if (repInstance.ReadReplicaSourceDBInstanceIdentifier.includes(rdsConfig.failover_configurations.identifier)) {
+                                custom_logging(chalk.green(`The read replica is already replicating from the correct source. Proceeding with promotion.`));
+                            } else {
+                                custom_logging(chalk.yellow(`Warning: The read replica is replicating from ${repInstance.ReadReplicaSourceDBInstanceIdentifier}, which differs from the expected source ${rdsConfig.failover_configurations.identifier}.`));
+                                throw new Error(`Read replica is not sourced from the expected DB. Aborting.`);
+                            }
+                        }
                     }
                 }
                 custom_logging(`Promoting ${environmentConfig.failover_region}'s ${rdsConfig.failover_configurations.identifier} to primary`);
@@ -489,8 +499,7 @@ const processFiles = async (file, options) => {
     configuration['CLIENT_NAME'] = process.env.CLIENT_NAME
     configuration['rds'] = [...fileConfig.rds]
     configuration.rds = fileConfig.rds.map(rdsConfig => ({
-        ...rdsConfig,
-        force_delete: process.env.FORCE_DELETE === 'true'
+        ...rdsConfig
     }));
     custom_logging(`Switching to ${chalk.green(configuration.switching_to)} environment`)
     await processRds(configuration)
