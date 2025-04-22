@@ -79,8 +79,6 @@ const getTransferUsers = async (transferClient, serverId) => {
       throw error;
     }
 };
-
-// Function to create a user on Transfer Family server
 // Function to create a user on Transfer Family server
 const createTransferUser = async (transferClient, serverId, userData) => {
     try {
@@ -114,10 +112,13 @@ const createTransferUser = async (transferClient, serverId, userData) => {
       // Add SSH public keys if present
       if (userData.SshPublicKeys && userData.SshPublicKeys.length > 0) {
         for (const sshKey of userData.SshPublicKeys) {
+          // Extract the SshPublicKeyBody string from the object
+          const keyBody = sshKey.SshPublicKeyBody;
+          
           await transferClient.importSshPublicKey({
             ServerId: serverId,
             UserName: userData.UserName,
-            SshPublicKeyBody: sshKey
+            SshPublicKeyBody: keyBody
           }).promise();
           custom_logging(chalk.green(`Added SSH public key for user ${userData.UserName}`));
         }
@@ -128,7 +129,7 @@ const createTransferUser = async (transferClient, serverId, userData) => {
       custom_logging(chalk.red(`Error creating user ${userData.UserName} on server ${serverId}: ${error.message}`));
       throw error;
     }
-};
+  };
 
 const replicateTransferUsers = async (transferClient, serverId, users) => {
   custom_logging(chalk.blue(`Replicating users to Transfer Family server: ${serverId}`));
