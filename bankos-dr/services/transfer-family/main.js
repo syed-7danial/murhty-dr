@@ -94,7 +94,7 @@ const createTransferUser = async (transferClient, serverId, userData) => {
     
     // Add SshPublicKeys if present
     if (userData.SshPublicKeys && userData.SshPublicKeys.length > 0) {
-      params.SshPublicKeys = userData.SshPublicKeys;
+      params.SshPublicKeyBody = userData.SshPublicKeys;
     }
     
     await transferClient.createUser(params).promise();

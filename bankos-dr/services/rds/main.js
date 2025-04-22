@@ -166,7 +166,7 @@ const waitForDbRenameComplete = async (rdsClient, oldName, newName) => {
 };
 
 const modifyDBInstanceIdentifier = async (rds, dbInstanceIdentifier) => {
-    const originalDbName = dbInstanceIdentifier.identifier;
+    const originalDbName = dbInstanceIdentifier;
 
     const now = new Date();
     const year = now.getUTCFullYear();
@@ -311,8 +311,11 @@ const processRds = async (environmentConfig) => {
 
                 if (global.PROCESS_CURRENT_ENVIRONMENT) {
                     let renamedActiveInstanceId = await modifyDBInstanceIdentifier(failoverRdsClient, rdsConfig.failover_configurations);
-                    
                     custom_logging(chalk.green(`Successfully renamed to ${renamedActiveInstanceId}`));
+                    if (rdsConfig.failover_configurations.replica_configuration && rdsConfig.failover_configurations.replica_configuration.identifier) {
+                        let renamedActiveReplciaInstanceId = await modifyDBInstanceIdentifier(failoverRdsClient, rdsConfig.failover_configurations.replica_configuration.identifier);
+                        custom_logging(chalk.green(`Successfully renamed the replica to ${renamedActiveReplciaInstanceId}`));
+                    }
 
                     let oldDbInstanceDetails = await describeDBInstances(failoverRdsClient, renamedActiveInstanceId);
                     const oldDbInstance = oldDbInstanceDetails.DBInstances[0];
@@ -456,9 +459,12 @@ const processRds = async (environmentConfig) => {
                 
 
                 if (global.PROCESS_CURRENT_ENVIRONMENT) {
-                    let renamedActiveInstanceId = await modifyDBInstanceIdentifier(activeRdsClient, rdsConfig.active_configurations);
-                    
+                    let renamedActiveInstanceId = await modifyDBInstanceIdentifier(activeRdsClient, rdsConfig.active_configurations.identifier);
                     custom_logging(chalk.green(`Successfully renamed to ${renamedActiveInstanceId}`));
+                    if (rdsConfig.active_configurations.replica_configuration && rdsConfig.active_configurations.replica_configuration.identifier) {
+                        let renamedActiveReplciaInstanceId = await modifyDBInstanceIdentifier(activeRdsClient, rdsConfig.active_configurations.replica_configuration.identifier);
+                        custom_logging(chalk.green(`Successfully renamed the replica to ${renamedActiveReplciaInstanceId}`));
+                    }
                     let oldDbInstanceDetails = await describeDBInstances(activeRdsClient, renamedActiveInstanceId);
                     const oldDbInstance = oldDbInstanceDetails.DBInstances[0];
                     
