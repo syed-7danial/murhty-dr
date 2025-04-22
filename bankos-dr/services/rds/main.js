@@ -87,6 +87,8 @@ const updateProxyTargets = async (rdsClient, proxyName, newDbInstanceId) => {
     }
 };
 
+
+
 const waitForReplicaPromotionComplete = async (rdsClient, dbInstanceIdentifier) => {
     let promotionNotComplete = true;
     custom_logging(chalk.yellow(`Waiting for ${dbInstanceIdentifier} promotion to complete...`));
@@ -298,6 +300,7 @@ const processRds = async (environmentConfig) => {
                         DBParameterGroupName: rdsConfig.active_configurations.db_parameter_group_name,
                         MultiAZ: activeInstanceDetails.DBInstances[0].MultiAZ,
                         AutoMinorVersionUpgrade: activeInstanceDetails.DBInstances[0].AutoMinorVersionUpgrade,
+                        EnableIAMDatabaseAuthentication: activeInstanceDetails.DBInstances[0].IAMDatabaseAuthenticationEnabled,
                         StorageType: activeInstanceDetails.DBInstances[0].StorageType,
                         CopyTagsToSnapshot: activeInstanceDetails.DBInstances[0].CopyTagsToSnapshot,
                         Iops: activeInstanceDetails.DBInstances[0].Iops
@@ -329,6 +332,7 @@ const processRds = async (environmentConfig) => {
                         DBParameterGroupName: rdsConfig.failover_configurations.db_parameter_group_name,
                         MultiAZ: oldDbInstance.MultiAZ,
                         AutoMinorVersionUpgrade: oldDbInstance.AutoMinorVersionUpgrade,
+                        EnableIAMDatabaseAuthentication: oldDbInstance.IAMDatabaseAuthenticationEnabled,
                         StorageType: oldDbInstance.StorageType,
                         CopyTagsToSnapshot: oldDbInstance.CopyTagsToSnapshot,
                         Iops: oldDbInstance.Iops
@@ -442,6 +446,7 @@ const processRds = async (environmentConfig) => {
                         DBParameterGroupName: rdsConfig.failover_configurations.db_parameter_group_name,
                         MultiAZ: failoverInstanceDetails.DBInstances[0].MultiAZ,
                         AutoMinorVersionUpgrade: failoverInstanceDetails.DBInstances[0].AutoMinorVersionUpgrade,
+                        EnableIAMDatabaseAuthentication: failoverInstanceDetails.DBInstances[0].IAMDatabaseAuthenticationEnabled,
                         StorageType: failoverInstanceDetails.DBInstances[0].StorageType,
                         CopyTagsToSnapshot: failoverInstanceDetails.DBInstances[0].CopyTagsToSnapshot,
                         Iops: failoverInstanceDetails.DBInstances[0].Iops
@@ -474,6 +479,7 @@ const processRds = async (environmentConfig) => {
                         DBParameterGroupName: rdsConfig.active_configurations.db_parameter_group_name,
                         MultiAZ: oldDbInstance.MultiAZ,
                         AutoMinorVersionUpgrade: oldDbInstance.AutoMinorVersionUpgrade,
+                        EnableIAMDatabaseAuthentication: oldDbInstance.IAMDatabaseAuthenticationEnabled,
                         StorageType: oldDbInstance.StorageType,
                         CopyTagsToSnapshot: oldDbInstance.CopyTagsToSnapshot,
                         Iops: oldDbInstance.Iops
