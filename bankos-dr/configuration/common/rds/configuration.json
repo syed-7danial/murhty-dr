@@ -14,7 +14,7 @@
                 }
             },
             "failover_configurations": {
-                "identifier": "database-6-readonly",
+                "identifier": "database-7-readonly",
                 "kms_key_id": "ff9aceb7-a089-4dcd-8aee-9e50e62e7c89",
                 "subnet_group_name":"danial-testing",
                 "security_group_ids":["sg-0a8c0c359d58bd3f7"],
