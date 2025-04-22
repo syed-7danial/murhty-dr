@@ -4,14 +4,14 @@
     "servers" : [
         {
             "active_server": {
-                "serverId": "s-876255c716964a1aa",
-                "bucket": "XYZ",
-                "iamRole": "XYZ"
+                "serverId": "s-381cf7ff72c448c0b",
+                "bucket": "danial-transfer-family-active",
+                "iamRole": "arn:aws:iam::489994096722:role/daniyal-sftp-role"
             },
             "failover_server": {
                 "serverId": "s-876255c716964a1aa",
-                "bucket": "XYZ",
-                "iamRole": "XYZ"
+                "bucket": "danial-transfer-family-failover",
+                "iamRole": "arn:aws:iam::489994096722:role/daniyal-sftp-role"
             }
         }
     ]

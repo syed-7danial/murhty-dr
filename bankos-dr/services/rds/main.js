@@ -207,9 +207,7 @@ const processRds = async (environmentConfig) => {
                 custom_logging(`Checking if ${rdsConfig.active_configurations.identifier} already exists in ${environmentConfig.active_region}`);
                 let getDbInstanceDetailsparams = { DBInstanceIdentifier: rdsConfig.active_configurations.identifier }
                 let dbInstanceDetails = await checkIfRdsExists(activeRdsClient, getDbInstanceDetailsparams)
-                let currentDateTime = new Date().toISOString();
-                currentDateTime = currentDateTime.replaceAll("T", "-").replaceAll(":", "-").split(".")[0]
-
+                
                 // if (dbInstanceDetails && dbInstanceDetails.DBInstances.length > 0) {
                 //     const dbInstance = dbInstanceDetails.DBInstances[0];
                     
