@@ -238,17 +238,7 @@ const processRds = async (environmentConfig) => {
                             custom_logging(chalk.green(`The read replica is already replicating from the correct source. Proceeding with promotion.`));
                         } else {
                             custom_logging(chalk.yellow(`Warning: The read replica is replicating from ${dbInstance.ReadReplicaSourceDBInstanceIdentifier}, which differs from the expected source ${rdsConfig.failover_configurations.identifier}.`));
-                        }
-                    } else if (rdsConfig.force_delete) {
-                        var deleteDbInstanceparams = {
-                            DBInstanceIdentifier: rdsConfig.active_configurations.identifier,
-                            FinalDBSnapshotIdentifier: rdsConfig.active_configurations.identifier + currentDateTime,
-                            SkipFinalSnapshot: false
-                        };
-                        
-                        custom_logging(chalk.red(`Deleting ${environmentConfig.active_region}'s ${rdsConfig.active_configurations.identifier}`));
-                        await deleteDbInstance(activeRdsClient, deleteDbInstanceparams);
-                        await waitForDbInstanceDeletion(activeRdsClient, deleteDbInstanceparams.DBInstanceIdentifier);
+                        }} 
                     }
                 }
                 
