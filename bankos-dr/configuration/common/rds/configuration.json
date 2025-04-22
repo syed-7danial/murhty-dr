@@ -4,21 +4,21 @@
     "rds":[
         {
             "active_configurations": {
-                "identifier": "database-6-readonly-20250422-004336",
+                "identifier": "meow",
                 "kms_key_id": "40a25d87-c7cd-4162-b7b8-f4fef85b53a5",
                 "subnet_group_name":"default-vpc-0022e4054c4a169bd",
                 "security_group_ids":["sg-0e788bc9b9e5d3c1b"],
-                "proxy_name": "database-1",
-                "replica_configuration": {
-                    "identifier": "database-6-readonly"
-                }
+                "proxy_name": "database-1"
             },
             "failover_configurations": {
-                "identifier": "database-7-readonly",
+                "identifier": "database-6-readonly",
                 "kms_key_id": "ff9aceb7-a089-4dcd-8aee-9e50e62e7c89",
                 "subnet_group_name":"danial-testing",
                 "security_group_ids":["sg-0a8c0c359d58bd3f7"],
-                "proxy_name": "test-2"
+                "proxy_name": "test-2",
+                "replica_configuration": {
+                    "identifier": "database-6-readonly-readonly"
+                }
             }
         }
     ]
