@@ -442,7 +442,6 @@ const processRds = async (environmentConfig) => {
                         DBSubnetGroupName: rdsConfig.failover_configurations.subnet_group_name,
                         VpcSecurityGroupIds: rdsConfig.failover_configurations.security_group_ids,
                         OptionGroupName: rdsConfig.failover_configurations.option_group_name,
-                        DBParameterGroupName: rdsConfig.failover_configurations.db_parameter_group_name,
                         MultiAZ: failoverInstanceDetails.DBInstances[0].MultiAZ,
                         AutoMinorVersionUpgrade: failoverInstanceDetails.DBInstances[0].AutoMinorVersionUpgrade,
                         EnableIAMDatabaseAuthentication: failoverInstanceDetails.DBInstances[0].IAMDatabaseAuthenticationEnabled,
