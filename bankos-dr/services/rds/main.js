@@ -310,7 +310,7 @@ const processRds = async (environmentConfig) => {
                 }
 
                 if (global.PROCESS_CURRENT_ENVIRONMENT) {
-                    let renamedActiveInstanceId = await modifyDBInstanceIdentifier(failoverRdsClient, rdsConfig.failover_configurations);
+                    let renamedActiveInstanceId = await modifyDBInstanceIdentifier(failoverRdsClient, rdsConfig.failover_configurations.identifier);
                     custom_logging(chalk.green(`Successfully renamed the instance to ${renamedActiveInstanceId}`));
                     if (rdsConfig.failover_configurations.replica_configuration && rdsConfig.failover_configurations.replica_configuration.identifier) {
                         let renamedActiveReplciaInstanceId = await modifyDBInstanceIdentifier(failoverRdsClient, rdsConfig.failover_configurations.replica_configuration.identifier);
