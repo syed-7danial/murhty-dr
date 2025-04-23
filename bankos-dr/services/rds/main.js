@@ -207,42 +207,6 @@ const processRds = async (environmentConfig) => {
                 custom_logging(`Checking if ${rdsConfig.active_configurations.identifier} already exists in ${environmentConfig.active_region}`);
                 let getDbInstanceDetailsparams = { DBInstanceIdentifier: rdsConfig.active_configurations.identifier }
                 let dbInstanceDetails = await checkIfRdsExists(activeRdsClient, getDbInstanceDetailsparams)
-                
-                // if (dbInstanceDetails && dbInstanceDetails.DBInstances.length > 0) {
-                //     const dbInstance = dbInstanceDetails.DBInstances[0];
-                    
-                //     if (dbInstance.ReadReplicaSourceDBInstanceIdentifier) {
-                //         custom_logging(chalk.yellow(`${rdsConfig.active_configurations.identifier} is already a read replica in ${environmentConfig.active_region}. Skipping deletion and creation.`));
-                        
-                //         if (dbInstance.ReadReplicaSourceDBInstanceIdentifier.includes(rdsConfig.failover_configurations.identifier)) {
-                //             custom_logging(chalk.green(`The read replica is already replicating from the correct source. Proceeding with promotion.`));
-                //         } else {
-                //             custom_logging(chalk.yellow(`Warning: The read replica is replicating from ${dbInstance.ReadReplicaSourceDBInstanceIdentifier}, which differs from the expected source ${rdsConfig.failover_configurations.identifier}.`));
-                //             throw new Error(`Read replica is not sourced from the expected DB. Aborting.`);
-                //         }
-                //     }
-                // }
-                
-                // if (!dbInstanceDetails || dbInstanceDetails.DBInstances.length === 0) {
-                //     const failoverDbDetails = await describeDBInstances(failoverRdsClient, rdsConfig.failover_configurations.identifier);
-                //     const { Account: accountId } = await sts.getCallerIdentity({}).promise();
-                    
-                //     let createReadReplicaParams = {
-                //         DBInstanceIdentifier: rdsConfig.active_configurations.identifier,
-                //         SourceDBInstanceIdentifier: `arn:aws:rds:${environmentConfig.failover_region}:${accountId}:db:${rdsConfig.failover_configurations.identifier}`,
-                //         SourceRegion: environmentConfig.failover_region,
-                //         DBInstanceClass: failoverDbDetails.DBInstances[0].DBInstanceClass,
-                //         DBSubnetGroupName: rdsConfig.active_configurations.subnet_group_name,
-                //         VpcSecurityGroupIds: rdsConfig.active_configurations.security_group_ids,
-                //         OptionGroupName: failoverDbDetails.DBInstances[0].OptionGroupMemberships[0].OptionGroupName
-                //     };
-                    
-                //     if (rdsConfig.active_configurations.hasOwnProperty("kms_key_id") && rdsConfig.active_configurations.kms_key_id != "")
-                //         createReadReplicaParams['KmsKeyId'] = rdsConfig.active_configurations.kms_key_id;
-                    
-                //     custom_logging(`Creating read-replica of ${rdsConfig.failover_configurations.identifier} in ${environmentConfig.active_region}`);
-                //     await createReadReplica(activeRdsClient, createReadReplicaParams);
-                // }
 
                 if (!dbInstanceDetails){
                     custom_logging(chalk.yellow(`${rdsConfig.active_configurations.identifier} does not exist, which is unexpected as first replica should always be there...`));
