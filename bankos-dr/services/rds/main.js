@@ -87,8 +87,6 @@ const updateProxyTargets = async (rdsClient, proxyName, newDbInstanceId) => {
     }
 };
 
-
-
 const waitForReplicaPromotionComplete = async (rdsClient, dbInstanceIdentifier) => {
     let promotionNotComplete = true;
     custom_logging(chalk.yellow(`Waiting for ${dbInstanceIdentifier} promotion to complete...`));

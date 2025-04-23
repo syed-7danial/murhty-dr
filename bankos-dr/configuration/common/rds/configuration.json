@@ -4,7 +4,7 @@
     "rds":[
         {
             "active_configurations": {
-                "identifier": "danial-active-replica-readonly",
+                "identifier": "danial-testing",
                 "kms_key_id": "40a25d87-c7cd-4162-b7b8-f4fef85b53a5",
                 "subnet_group_name":"default-vpc-0c6d49e6ca824a445",
                 "option_group_name": "danial-active",
