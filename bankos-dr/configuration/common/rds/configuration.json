@@ -10,10 +10,7 @@
                 "option_group_name": "danial-active",
                 "db_parameter_group_name": "danial-active",
                 "security_group_ids":["sg-0f7f2bdb79f8a89bf"],
-                "proxy_name": "proxy-1745346956280-danial-active",
-                "replica_configuration": {
-                    "identifier": "danial-active-replica-readonly"
-                }
+                "proxy_name": "proxy-1745346956280-danial-active"
             },
             "failover_configurations": {
                 "identifier": "danial-failover-2",
@@ -22,7 +19,10 @@
                 "option_group_name": "danial-failover",
                 "db_parameter_group_name": "danial-failover",
                 "security_group_ids":["sg-08973cb6a1d40cf5d"],
-                "proxy_name": "test-2"
+                "proxy_name": "test-2",
+                "replica_configuration": {
+                    "identifier": "danial-failover-2-readonly"
+                }
             }
         }
     ]
