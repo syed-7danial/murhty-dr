@@ -4,21 +4,18 @@
     "rds":[
         {
             "active_configurations": {
-                "identifier": "danial-active",
+                "identifier": "database-1",
                 "kms_key_id": "40a25d87-c7cd-4162-b7b8-f4fef85b53a5",
-                "subnet_group_name":"default-vpc-02165f115bc3699c3",
-                "security_group_ids":["sg-0fbf7f04f1c17130c"],
-                "proxy_name": "proxy-1745346956280-danial-active"
+                "subnet_group_name":"default-vpc-06cb3b93bcafb8974",
+                "security_group_ids":["sg-0e1d79c449a420e2e"],
+                "proxy_name": "database-1"
             },
             "failover_configurations": {
-                "identifier": "danial-failover",
+                "identifier": "database-1-replica",
                 "kms_key_id": "ff9aceb7-a089-4dcd-8aee-9e50e62e7c89",
                 "subnet_group_name":"danial-failover",
-                "security_group_ids":["sg-0342e7181cef60bf5"],
-                "proxy_name": "test-2",
-                "replica_configuration": {
-                    "identifier": "danial-failover-readonly"
-                }
+                "security_group_ids":["sg-0dbeef190bfad8cc7"],
+                "proxy_name": "test-2"
             }
         }
     ]
