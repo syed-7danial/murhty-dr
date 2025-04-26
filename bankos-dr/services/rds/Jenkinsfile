@@ -65,11 +65,7 @@ pipeline {
                         }
                     }
                     
-                    parallel(
-                        parallelStages,
-                        failFast: false,
-                        maxParallel: 5
-                    )
+                    parallel parallelStages
                 }
             }
         }
