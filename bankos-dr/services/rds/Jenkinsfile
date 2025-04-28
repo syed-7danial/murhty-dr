@@ -1,18 +1,162 @@
+// pipeline {
+//     agent any
+//     parameters {
+//         choice(name: 'SWITCHING_TO', choices: ['ACTIVE', 'FAILOVER'], description: 'Select the environment')
+//         choice(name: 'CLIENT_NAME', choices: ['All', 'ach', 'fedwire', 'fednow', 'rtp', 'sample-client', 'udr'], description: 'Select the CLIENT_NAME')
+//         text(name: 'CUSTOM_CLIENTS', defaultValue: '', description: 'If provided, only these comma-separated clients will be processed (e.g., ach,fedwire,fednow)')
+//         string(name: 'BATCH_SIZE', defaultValue:'5', description: 'Number of RDS resources to be processed parallely')
+//         password(name: 'AWS_ACCESS_KEY_ID', defaultValue: '', description: 'AWS_ACCESS_KEY_ID')
+//         password(name: 'AWS_SECRET_ACCESS_KEY', defaultValue: '', description: 'AWS_SECRET_ACCESS_KEY')
+//         password(name: 'AWS_SESSION_TOKEN', defaultValue: '', description: 'AWS_SESSION_TOKEN')
+
+//         booleanParam(name: 'PROCESS_CURRENT_ENV', defaultValue: false, description: 'Check this to process current environment')
+//         booleanParam(name: 'PROCESS_COMMON_CONFIG', defaultValue: false, description: 'Process common configuration')
+//     }
+
+//     stages {
+//         stage('Install Node.js Packages') {
+//             steps {
+//                 sh '''
+//                 cd bankos-dr
+//                 npm install
+//                 '''
+//             }
+//         }
+
+//         stage('Process Client Configuration') {
+//             steps {
+//                 script {
+//                     env.AWS_ACCESS_KEY_ID = params.AWS_ACCESS_KEY_ID
+//                     env.AWS_SECRET_ACCESS_KEY = params.AWS_SECRET_ACCESS_KEY
+//                     env.AWS_SESSION_TOKEN = params.AWS_SESSION_TOKEN
+
+//                     env.SWITCHING_TO = params.SWITCHING_TO
+
+//                     def clientsToProcess = []
+                    
+//                     if (params.CUSTOM_CLIENTS?.trim()) {
+//                         clientsToProcess = params.CUSTOM_CLIENTS.split(',').collect { it.trim() }
+//                     } 
+//                     else if (params.CLIENT_NAME == 'All') {
+//                         clientsToProcess = ['ach', 'fedwire', 'fednow', 'rtp', 'sample-client', 'udr']
+//                     } else {
+//                         clientsToProcess = [params.CLIENT_NAME]
+//                     }
+
+//                     if (params.PROCESS_COMMON_CONFIG) {
+//                         clientsToProcess.add('common')
+//                     }
+
+//                     env.CLIENTS_TO_PROCESS = clientsToProcess.join(',')
+//                     echo "Clients to process: ${env.CLIENTS_TO_PROCESS}"
+//                 }
+//             }
+//         }
+
+//         stage('Process Clients in Parallel') {
+//             steps {
+//                 script {
+//                     def clientsList = env.CLIENTS_TO_PROCESS.split(',')
+                    
+//                     writeFile file: 'count_rds_resources.js', text: '''
+//                     const fs = require('fs');
+//                     const path = require('path');
+                    
+//                     const client = process.argv[2];
+                    
+//                     try {
+//                         const configPath = path.join(process.cwd(), 'bankos-dr', 'configuration', client, 'rds', 'configuration.json');
+//                         const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+                        
+//                         if (config.rds && Array.isArray(config.rds)) {
+//                             console.log(config.rds.length);
+//                         } else {
+//                             console.log(0);
+//                         }
+//                     } catch (error) {
+//                         console.error(`Error processing config for ${client}:`, error);
+//                         console.log(0);
+//                     }
+//                     '''
+                    
+//                     def parallelClientStages = [:]
+                    
+//                     for (def client in clientsList) {
+//                         def currentClient = client
+                        
+//                         parallelClientStages["Client: ${currentClient}"] = {
+//                             def rdsCount = sh(script: "node count_rds_resources.js ${currentClient}", returnStdout: true).trim().toInteger()
+                            
+//                             if (rdsCount > 0) {
+//                                 echo "Found ${rdsCount} RDS resources for client ${currentClient}"
+                                
+//                                 def parallelRdsStages = [:]
+                                
+//                                 for (int i = 0; i < rdsCount; i++) {
+//                                     def rdsIndex = i
+                                    
+//                                     parallelRdsStages["RDS Resource ${rdsIndex}"] = {
+//                                         def command = "node bankos-dr/services/rds/main.js"
+//                                         withEnv([
+//                                             "CLIENT_NAME=${currentClient}",
+//                                             "RDS_INDEX=${rdsIndex}"
+//                                         ]) {                                            
+//                                             if (params.PROCESS_CURRENT_ENV) {
+//                                                 command += ' -pce'
+//                                             }
+                                            
+//                                             command += " --rds-index=${rdsIndex}"
+                                            
+//                                             echo "Processing RDS resource index ${rdsIndex} for client: ${currentClient}"
+//                                             sh command
+//                                         }
+//                                     }
+//                                 }
+                                
+//                                 parallel parallelRdsStages
+//                             } else {
+//                                 echo "No RDS resources found for client ${currentClient}"
+//                             }
+//                         }
+//                     }
+                    
+//                     parallel parallelClientStages
+//                 }
+//             }
+//         }
+//     }
+
+//     post {
+//         always {
+//             cleanWs()  // Clean up workspace after the pipeline execution
+//         }
+//     }
+// }
+
 pipeline {
     agent any
+    
     parameters {
         choice(name: 'SWITCHING_TO', choices: ['ACTIVE', 'FAILOVER'], description: 'Select the environment')
         choice(name: 'CLIENT_NAME', choices: ['All', 'ach', 'fedwire', 'fednow', 'rtp', 'sample-client', 'udr'], description: 'Select the CLIENT_NAME')
         text(name: 'CUSTOM_CLIENTS', defaultValue: '', description: 'If provided, only these comma-separated clients will be processed (e.g., ach,fedwire,fednow)')
-        string(name: 'BATCH_SIZE', defaultValue:'5', description: 'Number of RDS resources to be processed parallely')
+        password(name: 'API_TOKEN', defaultValue: '', description: 'Authentication token for the API')
         password(name: 'AWS_ACCESS_KEY_ID', defaultValue: '', description: 'AWS_ACCESS_KEY_ID')
         password(name: 'AWS_SECRET_ACCESS_KEY', defaultValue: '', description: 'AWS_SECRET_ACCESS_KEY')
         password(name: 'AWS_SESSION_TOKEN', defaultValue: '', description: 'AWS_SESSION_TOKEN')
-
+        booleanParam(name: 'DRY_RUN', defaultValue: true, description: 'If true, will only print actions without executing them')
+        booleanParam(name: 'FORCE_DELETE', defaultValue: false, description: 'Check this to set force_delete to true')
         booleanParam(name: 'PROCESS_CURRENT_ENV', defaultValue: false, description: 'Check this to process current environment')
         booleanParam(name: 'PROCESS_COMMON_CONFIG', defaultValue: false, description: 'Process common configuration')
+        string(name: 'BATCH_SIZE', defaultValue: '3', description: 'Number of RDS resources to process in parallel')
     }
-
+    
+    environment {
+        SCRIPT_DIR = "${WORKSPACE}/bankos-dr"
+        LOG_DIR = "${WORKSPACE}/logs"
+        CONFIG_DIR = "${WORKSPACE}/config"
+    }
+    
     stages {
         stage('Install Node.js Packages') {
             steps {
@@ -23,17 +167,15 @@ pipeline {
             }
         }
 
-        stage('Process Client Configuration') {
+        stage('Determine Clients to Process') {
             steps {
                 script {
                     env.AWS_ACCESS_KEY_ID = params.AWS_ACCESS_KEY_ID
                     env.AWS_SECRET_ACCESS_KEY = params.AWS_SECRET_ACCESS_KEY
                     env.AWS_SESSION_TOKEN = params.AWS_SESSION_TOKEN
-
                     env.SWITCHING_TO = params.SWITCHING_TO
 
                     def clientsToProcess = []
-                    
                     if (params.CUSTOM_CLIENTS?.trim()) {
                         clientsToProcess = params.CUSTOM_CLIENTS.split(',').collect { it.trim() }
                     } 
@@ -42,22 +184,56 @@ pipeline {
                     } else {
                         clientsToProcess = [params.CLIENT_NAME]
                     }
-
+                    
                     if (params.PROCESS_COMMON_CONFIG) {
                         clientsToProcess.add('common')
                     }
-
+                    
                     env.CLIENTS_TO_PROCESS = clientsToProcess.join(',')
                     echo "Clients to process: ${env.CLIENTS_TO_PROCESS}"
                 }
             }
         }
-
-        stage('Process Clients in Parallel') {
+        
+        // Create helper script for counting RDS resources
+        // stage('Create Helper Scripts') {
+        //     steps {
+        //         script {
+        //             // Create a helper script to count RDS resources in a config
+        //             writeFile file: 'count_rds_resources.js', text: '''
+        //             const fs = require('fs');
+        //             const path = require('path');
+                    
+        //             const client = process.argv[2];
+                    
+        //             try {
+        //                 const configPath = path.join(process.cwd(), 'bankos-dr', 'configuration', client, 'rds', 'configuration.json');
+        //                 if (fs.existsSync(configPath)) {
+        //                     const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+                            
+        //                     if (config.rds && Array.isArray(config.rds)) {
+        //                         console.log(config.rds.length);
+        //                     } else {
+        //                         console.log(0);
+        //                     }
+        //                 } else {
+        //                     console.log(0);
+        //                 }
+        //             } catch (error) {
+        //                 console.error(`Error processing config for ${client}:`, error);
+        //                 console.log(0);
+        //             }
+        //             '''
+        //         }
+        //     }
+        // }
+        
+        stage('Process Clients') {
             steps {
                 script {
                     def clientsList = env.CLIENTS_TO_PROCESS.split(',')
-                    
+                    def parallelClients = [:]
+
                     writeFile file: 'count_rds_resources.js', text: '''
                     const fs = require('fs');
                     const path = require('path');
@@ -66,10 +242,14 @@ pipeline {
                     
                     try {
                         const configPath = path.join(process.cwd(), 'bankos-dr', 'configuration', client, 'rds', 'configuration.json');
-                        const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-                        
-                        if (config.rds && Array.isArray(config.rds)) {
-                            console.log(config.rds.length);
+                        if (fs.existsSync(configPath)) {
+                            const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+                            
+                            if (config.rds && Array.isArray(config.rds)) {
+                                console.log(config.rds.length);
+                            } else {
+                                console.log(0);
+                            }
                         } else {
                             console.log(0);
                         }
@@ -79,30 +259,38 @@ pipeline {
                     }
                     '''
                     
-                    def parallelClientStages = [:]
-                    
                     for (def client in clientsList) {
                         def currentClient = client
                         
-                        parallelClientStages["Client: ${currentClient}"] = {
+                        parallelClients["Client: ${currentClient}"] = {
                             def rdsCount = sh(script: "node count_rds_resources.js ${currentClient}", returnStdout: true).trim().toInteger()
                             
                             if (rdsCount > 0) {
                                 echo "Found ${rdsCount} RDS resources for client ${currentClient}"
                                 
-                                def parallelRdsStages = [:]
+                                def batchSize = params.BATCH_SIZE.toInteger()
+                                def batches = []
+                                def currentBatch = [:]
                                 
                                 for (int i = 0; i < rdsCount; i++) {
                                     def rdsIndex = i
                                     
-                                    parallelRdsStages["RDS Resource ${rdsIndex}"] = {
-                                        def command = "node bankos-dr/services/rds/main.js"
+                                    currentBatch["RDS Resource ${rdsIndex}"] = {
+                                        def command = "node ${SCRIPT_DIR}/services/rds/main.js"
                                         withEnv([
                                             "CLIENT_NAME=${currentClient}",
                                             "RDS_INDEX=${rdsIndex}"
-                                        ]) {                                            
+                                        ]) {
+                                            if (params.DRY_RUN) {
+                                                command += ' -dr'
+                                            }
+                                            
                                             if (params.PROCESS_CURRENT_ENV) {
                                                 command += ' -pce'
+                                            }
+                                            
+                                            if (params.FORCE_DELETE) {
+                                                command += ' --force-delete=true'
                                             }
                                             
                                             command += " --rds-index=${rdsIndex}"
@@ -111,16 +299,26 @@ pipeline {
                                             sh command
                                         }
                                     }
+                                    
+                                    if (currentBatch.size() >= batchSize || i == rdsCount - 1) {
+                                        batches.add(currentBatch)
+                                        currentBatch = [:]
+                                    }
                                 }
                                 
-                                parallel parallelRdsStages
+                                for (int batchIndex = 0; batchIndex < batches.size(); batchIndex++) {
+                                    stage("${currentClient} Batch ${batchIndex + 1}/${batches.size()}") {
+                                        echo "Processing batch ${batchIndex + 1} of ${batches.size()} for client ${currentClient}"
+                                        parallel batches[batchIndex]
+                                    }
+                                }
                             } else {
                                 echo "No RDS resources found for client ${currentClient}"
                             }
                         }
                     }
                     
-                    parallel parallelClientStages
+                    parallel parallelClients
                 }
             }
         }
