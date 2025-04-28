@@ -82,7 +82,7 @@ pipeline {
                     def parallelClientStages = [:]
                     
                     for (def client in clientsList) {
-                        def currentClient = client // Important: create a local variable for closure
+                        def currentClient = client
                         
                         parallelClientStages["Client: ${currentClient}"] = {
                             def rdsCount = sh(script: "node count_rds_resources.js ${currentClient}", returnStdout: true).trim().toInteger()
