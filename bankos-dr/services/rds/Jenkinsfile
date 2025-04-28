@@ -9,9 +9,9 @@ pipeline {
         password(name: 'AWS_SECRET_ACCESS_KEY', defaultValue: '', description: 'AWS_SECRET_ACCESS_KEY')
         password(name: 'AWS_SESSION_TOKEN', defaultValue: '', description: 'AWS_SESSION_TOKEN')
 
-        booleanParam(name: 'FORCE_DELETE', defaultValue: false, description: 'Check this to set force_delete to true')
         booleanParam(name: 'PROCESS_CURRENT_ENV', defaultValue: false, description: 'Check this to process current environment')
         booleanParam(name: 'PROCESS_COMMON_CONFIG', defaultValue: false, description: 'Process common configuration')
+        booleanParam(name: 'DRY_RUN', defaultValue: false, description: 'Run in dry run mode')
     }
 
     stages {
@@ -54,7 +54,7 @@ pipeline {
             }
         }
 
-        stage('Process Clients') {
+        stage('Process Clients in Parallel') {
             steps {
                 script {
                     def clientsList = env.CLIENTS_TO_PROCESS.split(',')
@@ -80,22 +80,26 @@ pipeline {
                     }
                     '''
                     
+                    def parallelClientStages = [:]
+                    
                     for (def client in clientsList) {
-                        stage("Process Client: ${client}") {
-                            def rdsCount = sh(script: "node count_rds_resources.js ${client}", returnStdout: true).trim().toInteger()
+                        def currentClient = client // Important: create a local variable for closure
+                        
+                        parallelClientStages["Client: ${currentClient}"] = {
+                            def rdsCount = sh(script: "node count_rds_resources.js ${currentClient}", returnStdout: true).trim().toInteger()
                             
                             if (rdsCount > 0) {
-                                echo "Found ${rdsCount} RDS resources for client ${client}"
+                                echo "Found ${rdsCount} RDS resources for client ${currentClient}"
                                 
-                                def parallelStages = [:]
+                                def parallelRdsStages = [:]
                                 
                                 for (int i = 0; i < rdsCount; i++) {
                                     def rdsIndex = i
                                     
-                                    parallelStages["RDS Resource ${rdsIndex}"] = {
+                                    parallelRdsStages["RDS Resource ${rdsIndex}"] = {
                                         def command = "node bankos-dr/services/rds/main.js"
                                         withEnv([
-                                            "CLIENT_NAME=${client}",
+                                            "CLIENT_NAME=${currentClient}",
                                             "RDS_INDEX=${rdsIndex}"
                                         ]) {
                                             if (params.DRY_RUN) {
@@ -106,23 +110,22 @@ pipeline {
                                                 command += ' -pce'
                                             }
                                             
-                                            if (params.FORCE_DELETE) {
-                                                command += ' --force-delete=true'
-                                            }
-                                            
                                             command += " --rds-index=${rdsIndex}"
                                             
-                                            echo "Processing RDS resource index ${rdsIndex} for client: ${client}"
+                                            echo "Processing RDS resource index ${rdsIndex} for client: ${currentClient}"
                                             sh command
                                         }
                                     }
-                                }                         
-                                parallel parallelStages
+                                }
+                                
+                                parallel parallelRdsStages
                             } else {
-                                echo "No RDS resources found for client ${client}"
+                                echo "No RDS resources found for client ${currentClient}"
                             }
                         }
                     }
+                    
+                    parallel parallelClientStages
                 }
             }
         }
