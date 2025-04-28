@@ -39,7 +39,7 @@ pipeline {
                         clientsToProcess = ['ach', 'fedwire', 'fednow', 'rtp', 'sample-client', 'udr']
                     }
                     else if (params.CLIENT_NAME == 'None') {
-                        error("No clients selected. Please select a CLIENT_NAME or provide CUSTOM_CLIENTS.")
+                        echo "No clients selected. Please select a CLIENT_NAME or provide CUSTOM_CLIENTS."
                         currentBuild.result = 'SUCCESS'
                         error("Pipeline completed: No clients were selected for processing.")
                     }  
