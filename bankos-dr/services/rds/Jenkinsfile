@@ -131,8 +131,7 @@ pipeline {
                                 echo "No RDS resources found for client ${currentClient}"
                             }
                         }
-                    }
-                    
+                    }                  
                     parallel parallelClients
                 }
             }
