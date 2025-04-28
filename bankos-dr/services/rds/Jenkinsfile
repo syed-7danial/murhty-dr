@@ -11,7 +11,6 @@ pipeline {
 
         booleanParam(name: 'PROCESS_CURRENT_ENV', defaultValue: false, description: 'Check this to process current environment')
         booleanParam(name: 'PROCESS_COMMON_CONFIG', defaultValue: false, description: 'Process common configuration')
-        booleanParam(name: 'DRY_RUN', defaultValue: false, description: 'Run in dry run mode')
     }
 
     stages {
@@ -101,11 +100,7 @@ pipeline {
                                         withEnv([
                                             "CLIENT_NAME=${currentClient}",
                                             "RDS_INDEX=${rdsIndex}"
-                                        ]) {
-                                            if (params.DRY_RUN) {
-                                                command += ' -dr'
-                                            }
-                                            
+                                        ]) {                                            
                                             if (params.PROCESS_CURRENT_ENV) {
                                                 command += ' -pce'
                                             }
