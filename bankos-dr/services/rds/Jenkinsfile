@@ -3,7 +3,7 @@ pipeline {
     
     parameters {
         choice(name: 'SWITCHING_TO', choices: ['ACTIVE', 'FAILOVER'], description: 'Select the environment')
-        choice(name: 'CLIENT_NAME', choices: ['All', 'ach', 'fedwire', 'fednow', 'rtp', 'sample-client', 'udr'], description: 'Select the CLIENT_NAME')
+        choice(name: 'CLIENT_NAME', choices: ['None', 'All', 'ach', 'fedwire', 'fednow', 'rtp', 'sample-client', 'udr'], description: 'Select the CLIENT_NAME')
         text(name: 'CUSTOM_CLIENTS', defaultValue: '', description: 'If provided, only these comma-separated clients will be processed (e.g., ach,fedwire,fednow)')
         string(name: 'BATCH_SIZE', defaultValue: '5', description: 'Number of RDS resources to process in parallel')
         password(name: 'AWS_ACCESS_KEY_ID', defaultValue: '', description: 'AWS_ACCESS_KEY_ID')
@@ -37,7 +37,11 @@ pipeline {
                     } 
                     else if (params.CLIENT_NAME == 'All') {
                         clientsToProcess = ['ach', 'fedwire', 'fednow', 'rtp', 'sample-client', 'udr']
-                    } else {
+                    }
+                    else if (params.CLIENT_NAME == 'None') {
+                        error("No clients selected. Please select a CLIENT_NAME or provide CUSTOM_CLIENTS.")
+                    }  
+                    else {
                         clientsToProcess = [params.CLIENT_NAME]
                     }
                     
