@@ -148,12 +148,6 @@ pipeline {
         booleanParam(name: 'PROCESS_COMMON_CONFIG', defaultValue: false, description: 'Process common configuration')
     }
     
-    environment {
-        SCRIPT_DIR = "${WORKSPACE}/bankos-dr"
-        LOG_DIR = "${WORKSPACE}/logs"
-        CONFIG_DIR = "${WORKSPACE}/config"
-    }
-    
     stages {
         stage('Install Node.js Packages') {
             steps {
@@ -273,21 +267,13 @@ pipeline {
                                     def rdsIndex = i
                                     
                                     currentBatch["RDS Resource ${rdsIndex}"] = {
-                                        def command = "node ${SCRIPT_DIR}/services/rds/main.js"
+                                        def command = "node bankos-dr/services/rds/main.js"
                                         withEnv([
                                             "CLIENT_NAME=${currentClient}",
                                             "RDS_INDEX=${rdsIndex}"
                                         ]) {
-                                            if (params.DRY_RUN) {
-                                                command += ' -dr'
-                                            }
-                                            
                                             if (params.PROCESS_CURRENT_ENV) {
                                                 command += ' -pce'
-                                            }
-                                            
-                                            if (params.FORCE_DELETE) {
-                                                command += ' --force-delete=true'
                                             }
                                             
                                             command += " --rds-index=${rdsIndex}"
