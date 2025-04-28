@@ -38,12 +38,7 @@ pipeline {
                     else if (params.CLIENT_NAME == 'All') {
                         clientsToProcess = ['ach', 'fedwire', 'fednow', 'rtp', 'sample-client', 'udr']
                     }
-                    else if (params.CLIENT_NAME == 'None') {
-                        echo "No clients selected. Please select a CLIENT_NAME or provide CUSTOM_CLIENTS."
-                        currentBuild.result = 'SUCCESS'
-                        error("Pipeline completed: No clients were selected for processing.")
-                    }  
-                    else {
+                    else if (params.CLIENT_NAME != 'None') {
                         clientsToProcess = [params.CLIENT_NAME]
                     }
                     
@@ -51,13 +46,23 @@ pipeline {
                         clientsToProcess.add('common')
                     }
                     
+                    if (clientsToProcess.isEmpty()) {
+                        echo "No clients selected. Please select a CLIENT_NAME, provide CUSTOM_CLIENTS, or enable PROCESS_COMMON_CONFIG."
+                        env.SKIP_PROCESSING = 'true'
+                        return
+                    }
+                    
                     env.CLIENTS_TO_PROCESS = clientsToProcess.join(',')
                     echo "Clients to process: ${env.CLIENTS_TO_PROCESS}"
+                    env.SKIP_PROCESSING = 'false'
                 }
             }
         }
 
         stage('Process Clients') {
+            when {
+                expression { return env.SKIP_PROCESSING != 'true' }
+            }
             steps {
                 script {
                     def clientsList = env.CLIENTS_TO_PROCESS.split(',')
