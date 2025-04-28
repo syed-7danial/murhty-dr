@@ -21,17 +21,25 @@ This script supports processing **multiple clients dynamically** based on the CL
 The CLIENT_NAME parameter can be set to:
   - A specific client name (e.g., `FED`, `RTP`, etc.)
   - `All` — which triggers the script to run for all configured clients.
+  - `None` - which process nothing and throws an error that no CLIENT_NAME was provided.
+
+Added CUSTOM_CLIENT text parameter which lets us define more than one client and process them parallely. Moreover, the 
+BATCH_SIZE parameter lets us define how many resources of rds of a single client to handle at a time. For instance, if
+BATCH_SIZE is defined as 5 which is it default value, then for each client the processes would be divided into 5. Five RDS
+resources would be handled first and then the next. This is done to effectively handle the API calls limit. 
 
 Additionally, enabling `PROCESS_COMMON_CONFIG` will add the **common configuration** to the client list for processing.
 
 ### Example Behaviors
 
-| CLIENT_NAME | PROCESS_COMMON_CONFIG | Clients Processed                                      |
+| CLIENT_NAME | PROCESS_COMMON_CONFIG | Clients Processed                                       |
 |-------------|------------------------|--------------------------------------------------------|
 | `FED`       | `false`                | `FED`                                                  |
-| `All`       | `false`                | `FED`, `RTP`, `FED-ACH`, `sample-client`              |
-| `All`       | `true`                 | `FED`, `RTP`, `FED-ACH`, `sample-client`, `common`    |
+| `All`       | `false`                | `FED`, `RTP`, `FED-ACH`, `sample-client`               |
+| `All`       | `true`                 | `FED`, `RTP`, `FED-ACH`, `sample-client`, `common`     |
 | `RTP`       | `true`                 | `RTP`, `common`                                        |
+| `None`      | `true`
+
 
 For each client in the list:
 - The script will be executed separately.
