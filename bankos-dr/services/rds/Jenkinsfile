@@ -87,12 +87,12 @@ pipeline {
                                         
                                         echo "Processing batch ${batchIndex + 1}/${batchCount} (resources ${startIndex}-${endIndex}) for client ${currentClient}"
                                         
-                                        def parallelTasks = [:]
+                                        def parallelSteps = [:]
                                         
                                         for (int i = startIndex; i <= endIndex; i++) {
                                             def rdsIndex = i
                                             
-                                            parallelTasks["RDS Resource ${rdsIndex+1}"] = {
+                                            parallelSteps["RDS Resource ${rdsIndex+1}"] = {
                                                 def command = "node bankos-dr/services/rds/main.js"
                                                 withEnv([
                                                     "CLIENT_NAME=${currentClient}",
@@ -110,7 +110,7 @@ pipeline {
                                             }
                                         }
                                         
-                                        parallel parallelTasks
+                                        parallel parallelSteps
                                     }
                                 } else {
                                     echo "No RDS resources found for client ${currentClient}"
