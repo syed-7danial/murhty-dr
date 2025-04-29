@@ -263,7 +263,7 @@ pipeline {
                                     echo "Found ${rdsCount} RDS resources for client ${currentClient}"
                                     
                                     def batchSize = params.BATCH_SIZE.toInteger()
-                                    def batchCount = Math.ceil(rdsCount / batchSize)
+                                    def batchCount = (rdsCount + batchSize - 1).intdiv(batchSize)
                                     
                                     // Process all batches
                                     for (int batchIndex = 0; batchIndex < batchCount; batchIndex++) {
