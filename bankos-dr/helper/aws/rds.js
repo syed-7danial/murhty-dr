@@ -4,7 +4,6 @@ const AWS = require('aws-sdk');
 const prompt = require('prompt-sync')();
 
 function delay(ms) {
-    console.log("I'm going to wait first")
     return new Promise(resolve => setTimeout(resolve, ms));
 }
   
