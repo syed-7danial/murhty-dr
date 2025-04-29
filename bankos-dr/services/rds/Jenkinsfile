@@ -84,7 +84,7 @@ pipeline {
                                         for (int batchIndex = 0; batchIndex < batchCount; batchIndex++) {
                                             def startIndex = batchIndex * resourcesBatchSize
                                             def endIndex = Math.min((batchIndex + 1) * resourcesBatchSize - 1, rdsCount - 1)
-                                            echo "Processing batch ${batchIndex + 1}/${batchCount} (resources ${startIndex}-${endIndex}) for client ${currentClient}"
+                                            echo "Processing batch ${batchIndex + 1}/${batchCount} (resources ${startIndex+1}-${endIndex+1}) for client ${currentClient}"
                                             def parallelSteps = [:]
                                             for (int i = startIndex; i <= endIndex; i++) {
                                                 def rdsIndex = i
