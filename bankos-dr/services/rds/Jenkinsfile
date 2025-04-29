@@ -76,7 +76,7 @@ pipeline {
                         for (def client in clientBatch) {
                             def currentClient = client
                             parallelClientStages["Client: ${ currentClient }"] = {
-                                stage("Process Client: ${ currentClient }") {
+                                stage("Process Client: ${ currentClient } (Batch ${clientBatchIndex + 1}/${clientBatchCount}) ") {
                                     def rdsCount = sh(script: "node bankos-dr/helper/utils/get_configuration_resources_count.js ${currentClient} rds", returnStdout: true).trim().toInteger()
                                     if (rdsCount > 0) {
                                         echo "Found ${rdsCount} RDS resources for client ${currentClient}"
