@@ -73,6 +73,7 @@ pipeline {
                         
                         parallelStages["Client: ${currentClient}"] = {
                             stage("Process Client: ${currentClient}") {
+                                sleep(time: 10, unit: 'SECONDS')
                                 def rdsCount = sh(script: "node bankos-dr/helper/utils/rds_resources_chunk.js ${currentClient}", returnStdout: true).trim().toInteger()
                                 
                                 if (rdsCount > 0) {
@@ -120,6 +121,7 @@ pipeline {
                     }
                     
                     parallel parallelStages
+                    sleep(time: 10, unit: 'SECONDS')
                 }
             }
         }
