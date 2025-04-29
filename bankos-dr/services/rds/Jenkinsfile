@@ -226,30 +226,30 @@ pipeline {
                     def clientsList = env.CLIENTS_TO_PROCESS.split(',')
                     def parallelStages = [:]
 
-                    writeFile file: 'rds_resources_chunk.js', text: '''
-                    const fs = require('fs');
-                    const path = require('path');
+                    // writeFile file: 'rds_resources_chunk.js', text: '''
+                    // const fs = require('fs');
+                    // const path = require('path');
                     
-                    const client = process.argv[2];
+                    // const client = process.argv[2];
                     
-                    try {
-                        const configPath = path.join(process.cwd(), 'bankos-dr', 'configuration', client, 'rds', 'configuration.json');
-                        if (fs.existsSync(configPath)) {
-                            const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+                    // try {
+                    //     const configPath = path.join(process.cwd(), 'bankos-dr', 'configuration', client, 'rds', 'configuration.json');
+                    //     if (fs.existsSync(configPath)) {
+                    //         const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
                             
-                            if (config.rds && Array.isArray(config.rds)) {
-                                console.log(config.rds.length);
-                            } else {
-                                console.log(0);
-                            }
-                        } else {
-                            console.log(0);
-                        }
-                    } catch (error) {
-                        console.error(`Error processing config for ${client}:`, error);
-                        console.log(0);
-                    }
-                    '''
+                    //         if (config.rds && Array.isArray(config.rds)) {
+                    //             console.log(config.rds.length);
+                    //         } else {
+                    //             console.log(0);
+                    //         }
+                    //     } else {
+                    //         console.log(0);
+                    //     }
+                    // } catch (error) {
+                    //     console.error(`Error processing config for ${client}:`, error);
+                    //     console.log(0);
+                    // }
+                    // '''
                     
                     // Create parallel stages for each client
                     for (def client in clientsList) {
@@ -257,7 +257,7 @@ pipeline {
                         
                         parallelStages["Client: ${currentClient}"] = {
                             stage("Process Client: ${currentClient}") {
-                                def rdsCount = sh(script: "node rds_resources_chunk.js ${currentClient}", returnStdout: true).trim().toInteger()
+                                def rdsCount = sh(script: "node bankos-dr/helper/utils/rds_resources_chunk.js ${currentClient}", returnStdout: true).trim().toInteger()
                                 
                                 if (rdsCount > 0) {
                                     echo "Found ${rdsCount} RDS resources for client ${currentClient}"
