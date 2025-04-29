@@ -59,11 +59,75 @@ pipeline {
             }
         }
 
+        // stage('Process Clients') {
+        //     when {
+        //         expression { return env.SKIP_PROCESSING != 'true' }
+        //     }
+        //     steps {
+        //         script {
+        //             def clientsList = env.CLIENTS_TO_PROCESS.split(',')
+        //             def parallelStages = [:]
+                    
+        //             for (def client in clientsList) {
+        //                 def currentClient = client
+                        
+        //                 parallelStages["Client: ${currentClient}"] = {
+        //                     stage("Process Client: ${currentClient}") {
+        //                         def rdsCount = sh(script: "node bankos-dr/helper/utils/rds_resources_chunk.js ${currentClient}", returnStdout: true).trim().toInteger()
+                                
+        //                         if (rdsCount > 0) {
+        //                             echo "Found ${rdsCount} RDS resources for client ${currentClient}"
+                                    
+        //                             def batchSize = params.BATCH_SIZE.toInteger()
+        //                             def batchCount = (rdsCount + batchSize - 1).intdiv(batchSize)
+                                    
+        //                             for (int batchIndex = 0; batchIndex < batchCount; batchIndex++) {
+        //                                 def startIndex = batchIndex * batchSize
+        //                                 def endIndex = Math.min((batchIndex + 1) * batchSize - 1, rdsCount - 1)
+                                        
+        //                                 echo "Processing batch ${batchIndex + 1}/${batchCount} (resources ${startIndex}-${endIndex}) for client ${currentClient}"
+                                        
+        //                                 def parallelTasks = [:]
+                                        
+        //                                 for (int i = startIndex; i <= endIndex; i++) {
+        //                                     def rdsIndex = i
+                                            
+        //                                     parallelTasks["RDS Resource ${rdsIndex+1}"] = {
+        //                                         def command = "node bankos-dr/services/rds/main.js"
+        //                                         withEnv([
+        //                                             "CLIENT_NAME=${currentClient}",
+        //                                             "RDS_INDEX=${rdsIndex}"
+        //                                         ]) {
+        //                                             if (params.PROCESS_CURRENT_ENV) {
+        //                                                 command += ' -pce'
+        //                                             }
+                                                    
+        //                                             command += " --rds-index=${rdsIndex}"
+                                                    
+        //                                             echo "Processing RDS resource index ${rdsIndex} for client: ${currentClient}"
+        //                                             sh command
+        //                                         }
+        //                                     }
+        //                                 }
+                                        
+        //                                 parallel parallelTasks
+        //                             }
+        //                         } else {
+        //                             echo "No RDS resources found for client ${currentClient}"
+        //                         }
+        //                     }
+        //                 }
+        //             }
+                    
+        //             parallel parallelStages
+        //         }
+        //     }
+        // }
         stage('Process Clients') {
             when {
                 expression { return env.SKIP_PROCESSING != 'true' }
             }
-            steps {
+            parallel {
                 script {
                     def clientsList = env.CLIENTS_TO_PROCESS.split(',')
                     def parallelStages = [:]
@@ -71,8 +135,8 @@ pipeline {
                     for (def client in clientsList) {
                         def currentClient = client
                         
-                        parallelStages["Client: ${currentClient}"] = {
-                            stage("Process Client: ${currentClient}") {
+                        parallelStages["Process Client: ${currentClient}"] = {
+                            node {
                                 def rdsCount = sh(script: "node bankos-dr/helper/utils/rds_resources_chunk.js ${currentClient}", returnStdout: true).trim().toInteger()
                                 
                                 if (rdsCount > 0) {
