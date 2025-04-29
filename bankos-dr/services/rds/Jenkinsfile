@@ -89,7 +89,8 @@ pipeline {
                                             for (int i = startIndex; i <= endIndex; i++) {
                                                 def rdsIndex = i
                                                 parallelSteps["RDS Resource ${ rdsIndex + 1 }"] = {
-                                                    def command = "node bankos-dr/services/rds/main.js"
+
+                                                    def command = "sleep 30"//"node bankos-dr/services/rds/main.js"
                                                     withEnv([
                                                         "CLIENT_NAME=${currentClient}",
                                                         "RDS_INDEX=${rdsIndex}"

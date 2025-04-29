@@ -24,9 +24,7 @@ The CLIENT_NAME parameter can be set to:
   - `None` - which process nothing and throws an error that no CLIENT_NAME was provided.
 
 Added CUSTOM_CLIENT text parameter which lets us define more than one client and process them parallely. Moreover, the 
-BATCH_SIZE parameter lets us define how many resources of rds of a single client to handle at a time. For instance, if
-BATCH_SIZE is defined as 5 which is it default value, then for each client the processes would be divided into 5. Five RDS
-resources would be handled first and then the next. This is done to effectively handle the API calls limit. 
+RESOURCE_BATCH_SIZE parameter lets us define how many resources of rds of a single client to handle at a time and CLIENT_BATCH_SIZE parameters lets us define how many clients ahould be processed in parallel. For instance, if RESOURCE_BATCH_SIZE is defined as 5 and CLIENT_BATCH_SIZE is 2, the two clients would be processed with their rds resources converted in batch of 5 resources at a single time to be processed.
 
 Additionally, enabling `PROCESS_COMMON_CONFIG` will add the **common configuration** to the client list for processing.
 
