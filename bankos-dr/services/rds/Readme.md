@@ -38,7 +38,8 @@ Additionally, enabling `PROCESS_COMMON_CONFIG` will add the **common configurati
 | `All`       | `false`                | `FED`, `RTP`, `FED-ACH`, `sample-client`               |
 | `All`       | `true`                 | `FED`, `RTP`, `FED-ACH`, `sample-client`, `common`     |
 | `RTP`       | `true`                 | `RTP`, `common`                                        |
-| `None`      | `true`
+| `None`      | `true`                 | `common`                                               |
+| `None`      | `false`                |                                                        |
 
 
 For each client in the list:
