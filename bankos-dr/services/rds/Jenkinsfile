@@ -98,7 +98,7 @@ pipeline {
                                                         if (params.PROCESS_CURRENT_ENV) {
                                                             command += ' -pce'
                                                         }
-                                                        command += " --rds-index=${rdsIndex}"
+                                                        //command += " --rds-index=${rdsIndex}"
                                                         echo "Processing RDS resource index ${rdsIndex} for client: ${currentClient}"
                                                         sh command
                                                     }
