@@ -1,6 +1,6 @@
+def CLIENT_LIST = ['ach', 'fedwire', 'fednow', 'sample-client', 'udr']
 pipeline {
     agent any
-    def CLIENT_LIST = ['ach', 'fedwire', 'fednow', 'sample-client', 'udr']
     parameters {
         choice(name: 'SWITCHING_TO', choices: ['ACTIVE', 'FAILOVER'], description: 'Select the environment')
         // choice(name: 'CLIENT_NAME', choices: ['None', 'All', 'ach', 'fedwire', 'fednow', 'rtp', 'sample-client', 'udr'], description: 'Select the CLIENT_NAME')
