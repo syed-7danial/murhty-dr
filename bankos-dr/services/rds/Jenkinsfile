@@ -1,8 +1,10 @@
 pipeline {
     agent any
+    def CLIENT_LIST = ['ach', 'fedwire', 'fednow', 'rtp', 'sample-client', 'udr']
     parameters {
         choice(name: 'SWITCHING_TO', choices: ['ACTIVE', 'FAILOVER'], description: 'Select the environment')
-        choice(name: 'CLIENT_NAME', choices: ['None', 'All', 'ach', 'fedwire', 'fednow', 'rtp', 'sample-client', 'udr'], description: 'Select the CLIENT_NAME')
+        // choice(name: 'CLIENT_NAME', choices: ['None', 'All', 'ach', 'fedwire', 'fednow', 'rtp', 'sample-client', 'udr'], description: 'Select the CLIENT_NAME')
+        choice(name: 'CLIENT_NAME', choices: ['None', 'All'] + CLIENT_LIST, description: 'Select the CLIENT_NAME')
         text(name: 'CUSTOM_CLIENTS', defaultValue: '', description: 'If provided, only these comma-separated clients will be processed (e.g., ach,fedwire,fednow)')
         string(name: 'CLIENTS_BATCH_SIZE', defaultValue: '5', description: 'Number of clients to process in parallel')
         string(name: 'RESOURCES_BATCH_SIZE', defaultValue: '5', description: 'Number of RDS resources to process in parallel')
@@ -33,7 +35,7 @@ pipeline {
                         clientsToProcess = params.CUSTOM_CLIENTS.split(',').collect { it.trim() }
                     } 
                     else if (params.CLIENT_NAME == 'All') {
-                        clientsToProcess = ['ach', 'fedwire', 'fednow', 'rtp', 'sample-client', 'udr']
+                        clientsToProcess = CLIENT_LIST
                     }
                     else if (params.CLIENT_NAME != 'None') {
                         clientsToProcess = [params.CLIENT_NAME]
@@ -90,7 +92,7 @@ pipeline {
                                                 def rdsIndex = i
                                                 parallelSteps["RDS Resource ${ rdsIndex + 1 }"] = {
 
-                                                    def command = "sleep 30"//"node bankos-dr/services/rds/main.js"
+                                                    def command = "node bankos-dr/services/rds/main.js"
                                                     withEnv([
                                                         "CLIENT_NAME=${currentClient}",
                                                         "RDS_INDEX=${rdsIndex}"
@@ -98,7 +100,7 @@ pipeline {
                                                         if (params.PROCESS_CURRENT_ENV) {
                                                             command += ' -pce'
                                                         }
-                                                        //command += " --rds-index=${rdsIndex}"
+                                                        command += " --rds-index=${rdsIndex}"
                                                         echo "Processing RDS resource index ${rdsIndex} for client: ${currentClient}"
                                                         sh command
                                                     }
