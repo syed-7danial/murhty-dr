@@ -1,9 +1,8 @@
-def CLIENT_LIST = ['ach', 'fedwire', 'fednow', 'sample-client', 'udr']
+def CLIENT_LIST = ['ach', 'fedwire', 'fednow', 'rtp', 'sample-client', 'udr']
 pipeline {
     agent any
     parameters {
         choice(name: 'SWITCHING_TO', choices: ['ACTIVE', 'FAILOVER'], description: 'Select the environment')
-        // choice(name: 'CLIENT_NAME', choices: ['None', 'All', 'ach', 'fedwire', 'fednow', 'rtp', 'sample-client', 'udr'], description: 'Select the CLIENT_NAME')
         choice(name: 'CLIENT_NAME', choices: ['None', 'All'] + CLIENT_LIST, description: 'Select the CLIENT_NAME')
         text(name: 'CUSTOM_CLIENTS', defaultValue: '', description: 'If provided, only these comma-separated clients will be processed (e.g., ach,fedwire,fednow)')
         string(name: 'CLIENTS_BATCH_SIZE', defaultValue: '5', description: 'Number of clients to process in parallel')
